@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import altair as alt
+import io
 
 # --------------------
 # 1. 페이지 설정
