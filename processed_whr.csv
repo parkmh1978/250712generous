@@ -1,4 +1,4 @@
-﻿countr,regional_indicator,year,life_ladder,log_gdp_per_capita,social_support,healthy_life_expectancy_at_birth,freedom_to_make_life_choices,generosity,perceptions_of_corruption,positive_affect,negative_affect,confidence_in_national_government
+﻿country,regional_indicator,year,life_ladder,log_gdp_per_capita,social_support,healthy_life_expectancy_at_birth,freedom_to_make_life_choices,generosity,perceptions_of_corruption,positive_affect,negative_affect,confidence_in_national_government
 Afghanistan,South Asia,2008,3.723589897,7.350416183,0.450662315,50.5,0.718114316,0.167652458,0.88168633,0.414297044,0.25819549,0.61207211
 Afghanistan,South Asia,2009,4.401778221,7.508646011,0.55230844,50.79999924,0.678896368,0.190808803,0.850035429,0.481421441,0.23709242,0.611545205
 Afghanistan,South Asia,2010,4.75838089,7.613899708,0.539075196,51.09999847,0.60012722,0.121316046,0.706766069,0.516906679,0.275323808,0.299357414
