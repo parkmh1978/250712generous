@@ -139,7 +139,7 @@ st.markdown("""
 
 # 분석에 사용할 요인 컬럼 목록 (표시 이름)
 factor_columns = [
-    'Life Ladder', 'Log GDP per capita', 'Social Support',
+    'Generosity', 'Life Ladder', 'Log GDP per capita', 'Social Support',
     'Healthy Life Expectancy at Birth', 'Freedom to Make Life Choices',
     'Perceptions of Corruption', 'Positive Affect', 'Negative Affect',
     'Confidence in National Government'
