@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go # plotly.graph_objects 임포트
+from plotly.subplots import make_subplots # make_subplots 임포트
 import io
 
 # --------------------
@@ -338,27 +340,62 @@ if not trend_data_numeric.empty:
         )
 
         if final_selected_variables_for_plot:
-            # Melt the DataFrame to long format for Plotly Express
-            melted_plot_df = pd.melt(plot_df_final, 
-                                     id_vars=['Year', 'Country'], 
-                                     value_vars=final_selected_variables_for_plot,
-                                     var_name='Metric', 
-                                     value_name='Value')
+            # Create a subplot with secondary y-axis
+            fig_trend = make_subplots(specs=[[{"secondary_y": True}]])
 
-            st.subheader(f"선택된 변수들의 연도별 추이")
-            fig_trend = px.line(melted_plot_df, x='Year', y='Value', 
-                                color='Country', # 국가별 색상 구분
-                                line_dash='Metric', # 변수별 선 스타일 구분
-                                title=f'선택된 변수들의 연도별 추이 (전체 평균 및 선택 국가)',
-                                labels={'Year': '연도', 'Value': '값', 'Metric': '변수'},
-                                markers=True,
-                                color_discrete_sequence=px.colors.qualitative.Bold,
-                                # Make Generosity solid, others dashed
-                                line_dash_map={metric: 'solid' if metric == 'Generosity' else 'dash' for metric in final_selected_variables_for_plot}) 
+            # Define which variables go on which axis
+            # 'Generosity' will always be on the primary (left) axis
+            primary_y_variables = ['Generosity'] if 'Generosity' in final_selected_variables_for_plot else []
+            secondary_y_variables = [var for var in final_selected_variables_for_plot if var != 'Generosity']
+
+            # Add traces for primary Y-axis (Generosity)
+            if primary_y_variables:
+                for country in plot_df_final['Country'].unique():
+                    country_data = plot_df_final[plot_df_final['Country'] == country]
+                    for metric in primary_y_variables:
+                        if metric in country_data.columns:
+                            fig_trend.add_trace(
+                                go.Scatter(
+                                    x=country_data['Year'],
+                                    y=country_data[metric],
+                                    mode='lines+markers',
+                                    name=f"{country} ({metric})",
+                                    line=dict(dash='solid'), # Generosity solid line
+                                    legendgroup=country,
+                                    showlegend=True
+                                ),
+                                secondary_y=False, # Primary Y-axis
+                            )
             
-            fig_trend.update_layout(template="plotly_white", title_x=0.5,
-                                    margin=dict(t=50, b=50, l=50, r=50),
-                                    hovermode="x unified")
+            # Add traces for secondary Y-axis (other selected factors)
+            if secondary_y_variables:
+                for country in plot_df_final['Country'].unique():
+                    country_data = plot_df_final[plot_df_final['Country'] == country]
+                    for metric in secondary_y_variables:
+                        if metric in country_data.columns:
+                            fig_trend.add_trace(
+                                go.Scatter(
+                                    x=country_data['Year'],
+                                    y=country_data[metric],
+                                    mode='lines+markers',
+                                    name=f"{country} ({metric})",
+                                    line=dict(dash='dash'), # Other factors dashed line
+                                    legendgroup=country,
+                                    showlegend=True
+                                ),
+                                secondary_y=True, # Secondary Y-axis
+                            )
+
+            # Update layout for dual axes
+            fig_trend.update_layout(
+                title_text=f'선택된 변수들의 연도별 추이 (전체 평균 및 선택 국가)',
+                template="plotly_white",
+                title_x=0.5,
+                margin=dict(t=50, b=50, l=50, r=50),
+                hovermode="x unified",
+                yaxis=dict(title='관대함 지수 (좌측 축)'),
+                yaxis2=dict(title='다른 요인 값 (우측 축)', overlaying='y', side='right')
+            )
             st.plotly_chart(fig_trend, use_container_width=True)
         else:
             st.info("추이를 볼 변수를 하나 이상 선택해주세요. '관대함' 지수는 기본으로 표시됩니다.")
@@ -376,4 +413,3 @@ st.markdown("""
 
 이러한 시각화는 데이터의 복잡성을 이해하는 데 유용하지만, 더 깊이 있는 통계적 추론을 위해서는 위에서 언급된 **혼합 효과 모델**이나 **패널 데이터 분석**과 같은 고급 방법론을 고려해야 합니다.
 """)
-
