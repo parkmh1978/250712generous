@@ -9,7 +9,7 @@ import io
 # --------------------
 st.set_page_config(
     page_title="국가별 관대함 비교 웹 앱",
-    page_icon="🌍",
+    page_icon="�",
     layout="wide"
 )
 
@@ -228,9 +228,11 @@ with tab1: # Dashboard Overview
         fig_bar_all = px.bar(current_df_for_tab1.sort_values('Generosity', ascending=False), x='Country', y='Generosity',
                              title=f"{latest_year if latest_year else '전체'} 국가별 관대함 지수",
                              labels={'Country': '국가', 'Generosity': '관대함 지수'},
-                             color_discrete_sequence=px.colors.qualitative.D3) # Another good qualitative scale
+                             color_discrete_sequence=px.colors.qualitative.D3,
+                             hover_data=['iso_alpha']) # hover_data에 iso_alpha 추가
         fig_bar_all.update_layout(template="plotly_white", title_x=0.5,
-                                  margin=dict(t=50, b=50, l=50, r=50))
+                                  margin=dict(t=50, b=50, l=50, r=50),
+                                  bargap=0.2) # 막대 사이 간격 넓히기
         st.plotly_chart(fig_bar_all, use_container_width=True)
     else:
         st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
@@ -342,3 +344,4 @@ with tab4: # Data Table
         """)
     else:
         st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
+�
