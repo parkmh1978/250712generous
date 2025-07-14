@@ -54,7 +54,7 @@ def load_data():
             'freedom_to_make_life_choices': 'Freedom to Make Life Choices',
             'perceptions_of_corruption': 'Perceptions of Corruption',
             'positive_affect': 'Positive Affect',
-            'negative_affect': 'Negative Affect',
+            'negative_affect': 'Negative_affect', # 오타 수정: Negative Affect
             'confidence_in_national_government': 'Confidence in National Government'
         }, inplace=True)
 
@@ -378,7 +378,7 @@ with tab5: # Factor Analysis
     factor_columns = [
         'Life Ladder', 'Log GDP per capita', 'Social Support',
         'Healthy Life Expectancy at Birth', 'Freedom to Make Life Choices',
-        'Perceptions of Corruption', 'Positive Affect', 'Negative Affect',
+        'Perceptions of Corruption', 'Positive Affect', 'Negative Affect', # 'Negative_affect' 오타 수정
         'Confidence in National Government'
     ]
     
@@ -404,7 +404,7 @@ with tab5: # Factor Analysis
             """)
             
             for factor in selected_factors:
-                st.subheader(f"📈 {factor}와 관대함 지수")
+                st.subheader(f"� {factor}와 관대함 지수")
                 
                 # 전체 데이터 사용 (df_latest_year 대신 df 사용)
                 correlation_data = df[['Country', 'Year', 'Generosity', factor]].copy()
@@ -471,19 +471,96 @@ with tab5: # Factor Analysis
                 else:
                     st.info(f"{factor}와 관대함 지수 상관관계를 분석할 데이터가 부족합니다. 해당 요인에 결측치가 많을 수 있습니다.")
                 st.markdown("---") # 각 요인 분석 섹션 구분
-
         else:
             st.info("분석할 요인을 하나 이상 선택해주세요.")
 
+    # --- 새로운 연도별 추이 분석 섹션 ---
+    st.markdown("---")
+    st.header("📈 요인 및 관대함 지수 연도별 추이 분석")
     st.markdown("""
-    ### 💡 고급 분석 고려사항: 반복 측정 데이터의 특성
-
-    이 분석은 **전체 데이터**를 기반으로 한 **전체 상관관계(Pooled Correlation)**와 **국가 내 상관관계의 평균**을 제공합니다.
-    국가별 관대함 지수는 여러 해에 걸쳐 반복 측정된 데이터이므로, 다음과 같은 특성을 고려한 고급 통계 분석이 필요할 수 있습니다.
-
-    * **전체 상관관계의 한계:** 모든 데이터 포인트를 독립적인 관측치로 간주하여 계산한 상관계수입니다. 이는 국가별 고유한 특성이나 시간 경과에 따른 변화를 충분히 반영하지 못할 수 있습니다. 예를 들어, 특정 국가 내에서 요인과 관대함 지수가 양의 관계를 보여도, 국가 간의 평균 수준 차이 때문에 전체 상관관계는 다르게 나타날 수 있습니다.
-
-    * **국가 내 상관계수 평균의 의미:** 각 국가 내부에서 시간이 지남에 따라 요인과 관대함 지수가 어떻게 함께 변하는지를 나타내는 경향의 평균입니다. 이는 개별 국가의 변화 패턴을 더 잘 포착할 수 있습니다.
-
-    * **고급 통계 분석의 필요성:** 단순 상관관계는 인과관계를 의미하지 않으며, 패널 데이터의 복합적인 구조를 완전히 설명하지 못합니다. 예를 들어, GDP가 관대함에 직접적인 영향을 미칠 수도 있지만, 다른 숨겨진 사회적, 문화적 요인들이 GDP와 관대함 모두에 영향을 미칠 수도 있습니다. 보다 심층적인 분석을 위해서는 **혼합 효과 모델(Mixed-effects models)**, **고정 효과 모델(Fixed-effects models)** 또는 **동적 패널 모델(Dynamic Panel Models)**과 같은 통계 기법이 활용될 수 있습니다. 이러한 기법들은 국가별 고유한 특성과 시간 경과에 따른 변화를 동시에 고려하여 더 정확한 관계를 파악하고, 잠재적인 내생성 문제를 다루는 데 도움을 줍니다.
+    이 섹션에서는 선택된 요인 또는 관대함 지수의 연도별 변화 추이를 시각화합니다.
+    전체 국가의 평균 추이와 특정 국가의 추이를 비교할 수 있습니다.
     """)
+
+    # Prepare data for trend analysis
+    # Ensure 'Generosity' and all selected factors are numeric
+    # Use the full 'df' for time series analysis
+    trend_data_cols = ['Year', 'Country', 'Generosity'] + available_factors
+    trend_data_numeric = df[trend_data_cols].copy()
+
+    for col in ['Generosity'] + available_factors:
+        trend_data_numeric[col] = pd.to_numeric(trend_data_numeric[col], errors='coerce')
+    trend_data_numeric.dropna(subset=['Generosity'] + available_factors, inplace=True)
+
+    if not trend_data_numeric.empty:
+        # Calculate overall yearly average for Generosity and selected factors
+        yearly_overall_average = trend_data_numeric.groupby('Year')[['Generosity'] + available_factors].mean().reset_index()
+        yearly_overall_average['Country'] = '전체 평균'
+
+        # Get South Korea data
+        korea_data = trend_data_numeric[trend_data_numeric['Country'] == 'South Korea'].copy()
+        
+        # Multiselect for other countries
+        all_countries_for_trend = sorted(trend_data_numeric['Country'].unique().tolist())
+        # Remove 'South Korea' from options if it exists, as it's default
+        if 'South Korea' in all_countries_for_trend:
+            all_countries_for_trend.remove('South Korea')
+
+        selected_countries_for_trend = st.multiselect(
+            "추이를 비교할 추가 국가를 선택하세요:",
+            options=all_countries_for_trend,
+            default=[] # No default other than Korea
+        )
+
+        # Combine data for plotting
+        plot_df = yearly_overall_average.copy() # Start with overall average
+        
+        if not korea_data.empty:
+            plot_df = pd.concat([plot_df, korea_data])
+        else:
+            st.warning("데이터에 'South Korea'가 없어 해당 국가의 추이를 표시할 수 없습니다.")
+        
+        if selected_countries_for_trend:
+            other_countries_data = trend_data_numeric[trend_data_numeric['Country'].isin(selected_countries_for_trend)].copy()
+            plot_df = pd.concat([plot_df, other_countries_data])
+        
+        # Ensure 'Country' is a categorical type for consistent plotting colors
+        plot_df['Country'] = plot_df['Country'].astype('category')
+
+        # Select which variable to plot on the Y-axis
+        trend_variable_options = ['Generosity'] + available_factors
+        trend_variable = st.selectbox(
+            "추이를 볼 변수를 선택하세요:",
+            options=trend_variable_options,
+            index=0 # Default to Generosity
+        )
+
+        if trend_variable:
+            st.subheader(f"'{trend_variable}'의 연도별 추이")
+            fig_trend = px.line(plot_df, x='Year', y=trend_variable, color='Country',
+                                title=f'{trend_variable} 연도별 추이 (전체 평균 및 선택 국가)',
+                                labels={'Year': '연도', trend_variable: trend_variable},
+                                markers=True,
+                                color_discrete_sequence=px.colors.qualitative.Bold) # Use a distinct color palette
+            
+            fig_trend.update_layout(template="plotly_white", title_x=0.5,
+                                    margin=dict(t=50, b=50, l=50, r=50),
+                                    hovermode="x unified") # Improved hover experience
+            st.plotly_chart(fig_trend, use_container_width=True)
+        else:
+            st.info("추이를 볼 변수를 선택해주세요.")
+    else:
+        st.warning("연도별 추이 분석을 위한 데이터가 부족합니다. 원본 데이터를 확인해주세요.")
+
+    st.markdown("""
+    ### 💡 고급 분석 고려사항: 반복 측정 데이터의 특성 (추가 설명)
+
+    이 앱은 패널 데이터의 특성을 고려하여 **전체 상관관계**와 **국가 내 상관계수 평균**을 제공합니다.
+    연도별 추이 그래프는 시간 흐름에 따른 변화를 시각적으로 보여주어, 각 국가의 특성과 전체적인 경향을 파악하는 데 도움을 줍니다.
+
+    * **전체 평균:** 모든 국가의 해당 연도 데이터를 평균 낸 값으로, 전 세계적인 추세를 나타냅니다.
+    * **개별 국가:** 특정 국가의 연도별 변화를 보여줍니다.
+
+    이러한 시각화는 데이터의 복잡성을 이해하는 데 유용하지만, 더 깊이 있는 통계적 추론을 위해서는 위에서 언급된 **혼합 효과 모델**이나 **패널 데이터 분석**과 같은 고급 방법론을 고려해야 합니다.
+    """)
+�
