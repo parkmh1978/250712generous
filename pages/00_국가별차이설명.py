@@ -178,30 +178,58 @@ else:
 
             if not correlation_data.empty:
                 st.markdown("#### 🌍 전체 데이터 상관계수 (Pooled Correlation)")
-                if (correlation_data[factor].std() > 1e-9 and 
-                    correlation_data['Generosity'].std() > 1e-9 and 
-                    len(correlation_data) >= 2):
-                    
-                    pooled_correlation = correlation_data['Generosity'].corr(correlation_data[factor])
-                    st.metric(label=f"전체 데이터 '{factor}'와 관대함 지수 간 피어슨 상관계수", value=f"{pooled_correlation:.3f}")
+                
+                # OLS 추세선 관련 에러 처리를 위한 try-except 블록 추가
+                try:
+                    if (correlation_data[factor].std() > 1e-9 and 
+                        correlation_data['Generosity'].std() > 1e-9 and 
+                        len(correlation_data) >= 2):
+                        
+                        pooled_correlation = correlation_data['Generosity'].corr(correlation_data[factor])
+                        st.metric(label=f"전체 데이터 '{factor}'와 관대함 지수 간 피어슨 상관계수", value=f"{pooled_correlation:.3f}")
 
-                    fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
-                                             hover_name='Country',
-                                             color='Country',
-                                             title=f'전체 데이터: {factor} vs. 관대함 지수',
-                                             labels={factor: factor, 'Generosity': '관대함 지수'},
-                                             trendline='ols',
-                                             color_discrete_sequence=px.colors.qualitative.Plotly)
-                    fig_scatter.update_layout(template="plotly_white", title_x=0.5,
-                                              margin=dict(t=50, b=50, l=50, r=50))
-                    st.plotly_chart(fig_scatter, use_container_width=True)
-                else:
-                    st.info(f"전체 데이터에서 '{factor}' 또는 '관대함 지수' 데이터에 충분한 변화가 없거나 데이터 포인트가 부족하여 산점도 및 상관관계를 그릴 수 없습니다. (OLS 추세선 제외)")
+                        fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
+                                                 hover_name='Country',
+                                                 color='Country',
+                                                 title=f'전체 데이터: {factor} vs. 관대함 지수',
+                                                 labels={factor: factor, 'Generosity': '관대함 지수'},
+                                                 trendline='ols', # 선형 회귀 추세선 추가
+                                                 color_discrete_sequence=px.colors.qualitative.Plotly)
+                        fig_scatter.update_layout(template="plotly_white", title_x=0.5,
+                                                  margin=dict(t=50, b=50, l=50, r=50))
+                        st.plotly_chart(fig_scatter, use_container_width=True)
+                    else:
+                        st.info(f"전체 데이터에서 '{factor}' 또는 '관대함 지수' 데이터에 충분한 변화가 없거나 데이터 포인트가 부족하여 산점도 및 상관관계를 그릴 수 없습니다. (OLS 추세선 제외)")
+                        if len(correlation_data) > 0:
+                            fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
+                                                     hover_name='Country',
+                                                     color='Country',
+                                                     title=f'전체 데이터: {factor} vs. 관대함 지수 (추세선 없음 - 데이터 부족)',
+                                                     labels={factor: factor, 'Generosity': '관대함 지수'},
+                                                     color_discrete_sequence=px.colors.qualitative.Plotly)
+                            fig_scatter.update_layout(template="plotly_white", title_x=0.5,
+                                                      margin=dict(t=50, b=50, l=50, r=50))
+                            st.plotly_chart(fig_scatter, use_container_width=True)
+                except ModuleNotFoundError:
+                    st.error("오류: 'statsmodels' 라이브러리가 설치되어 있지 않아 OLS 추세선을 그릴 수 없습니다.")
+                    st.info("터미널에서 `pip install statsmodels`를 실행하여 설치해 주세요. 추세선 없이 산점도를 표시합니다.")
                     if len(correlation_data) > 0:
                         fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
                                                  hover_name='Country',
                                                  color='Country',
-                                                 title=f'전체 데이터: {factor} vs. 관대함 지수 (추세선 없음 - 데이터 부족)',
+                                                 title=f'전체 데이터: {factor} vs. 관대함 지수 (추세선 없음)',
+                                                 labels={factor: factor, 'Generosity': '관대함 지수'},
+                                                 color_discrete_sequence=px.colors.qualitative.Plotly)
+                        fig_scatter.update_layout(template="plotly_white", title_x=0.5,
+                                                  margin=dict(t=50, b=50, l=50, r=50))
+                        st.plotly_chart(fig_scatter, use_container_width=True)
+                except Exception as e:
+                    st.error(f"산점도 생성 중 알 수 없는 오류가 발생했습니다: {e}. 추세선 없이 산점도를 표시합니다.")
+                    if len(correlation_data) > 0:
+                        fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
+                                                 hover_name='Country',
+                                                 color='Country',
+                                                 title=f'전체 데이터: {factor} vs. 관대함 지수 (추세선 없음 - 오류 발생)',
                                                  labels={factor: factor, 'Generosity': '관대함 지수'},
                                                  color_discrete_sequence=px.colors.qualitative.Plotly)
                         fig_scatter.update_layout(template="plotly_white", title_x=0.5,
