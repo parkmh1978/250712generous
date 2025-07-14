@@ -133,7 +133,7 @@ latest_year = df['Year'].max() if 'Year' in df.columns else None
 # --------------------
 # 3. 요인 분석 섹션
 # --------------------
-st.header("📈 관대함 지수 요인 분석")
+st.header("� 관대함 지수 요인 분석")
 st.markdown("""
 이 섹션에서는 국가별 관대함 지수와 다양한 사회경제적 요인 간의 관계를 탐색합니다.
 **전체 연도 데이터**를 기반으로 선택된 요인들이 관대함에 미치는 영향을 분석합니다.
@@ -292,12 +292,10 @@ if not trend_data_numeric.empty:
         all_plot_countries_options.insert(0, '전체 평균')
     
     # Define default selected countries for the multiselect
-    # Ensure '전체 평균' is in the options before adding to default
     robust_default_countries_selection = []
     if '전체 평균' in all_plot_countries_options:
         robust_default_countries_selection.append('전체 평균')
     
-    # Ensure 'South Korea' is in the options before adding to default
     if 'South Korea' in all_plot_countries_options:
         robust_default_countries_selection.append('South Korea')
     else:
@@ -307,18 +305,15 @@ if not trend_data_numeric.empty:
     selected_countries_for_plot = st.multiselect(
         "추이를 비교할 국가를 선택하세요:",
         options=all_plot_countries_options,
-        default=robust_default_countries_selection # Use the robustly built default
+        default=robust_default_countries_selection
     )
 
     # Filter data based on selected countries
     plot_df_final = pd.DataFrame()
     
-    # Add '전체 평균' data if selected
     if '전체 평균' in selected_countries_for_plot:
         plot_df_final = pd.concat([plot_df_final, yearly_overall_average])
     
-    # Add other selected countries data
-    # Filter trend_data_numeric for actual country names (excluding '전체 평균' which is already handled)
     actual_countries_selected = [c for c in selected_countries_for_plot if c != '전체 평균']
     if actual_countries_selected:
         other_selected_countries_data = trend_data_numeric[trend_data_numeric['Country'].isin(actual_countries_selected)].copy()
@@ -326,17 +321,15 @@ if not trend_data_numeric.empty:
 
     if plot_df_final.empty:
         st.info("선택된 국가에 대한 데이터가 없습니다. 국가를 선택해주세요.")
-        # Do not st.stop() here as it might prevent other parts of the app from loading
     else:
         plot_df_final['Country'] = plot_df_final['Country'].astype('category')
 
         # Multiselect for variables to plot on the Y-axis
-        # 'Generosity'를 포함한 모든 available_factors를 옵션으로 제공하고, 'Generosity'를 기본 선택으로 설정
         default_selected_trend_variables = ['Generosity'] if 'Generosity' in available_factors else []
         final_selected_variables_for_plot = st.multiselect(
             "추이를 볼 변수를 선택하세요:",
-            options=available_factors, # 'Generosity' 포함 모든 요인
-            default=default_selected_trend_variables # 'Generosity'를 기본 선택으로
+            options=available_factors,
+            default=default_selected_trend_variables
         )
 
         if final_selected_variables_for_plot:
@@ -344,9 +337,17 @@ if not trend_data_numeric.empty:
             fig_trend = make_subplots(specs=[[{"secondary_y": True}]])
 
             # Define which variables go on which axis
-            # 'Generosity' will always be on the primary (left) axis
             primary_y_variables = ['Generosity'] if 'Generosity' in final_selected_variables_for_plot else []
             secondary_y_variables = [var for var in final_selected_variables_for_plot if var != 'Generosity']
+
+            # Define a color palette for metrics
+            # Using Plotly's qualitative colors for distinctness
+            colors = px.colors.qualitative.Bold
+            metric_color_map = {metric: colors[i % len(colors)] for i, metric in enumerate(available_factors)}
+
+            # Define dash styles for countries
+            dash_styles = ['solid', 'dash', 'dot', 'longdash', 'dashdot', 'longdashdot']
+            country_dash_map = {country: dash_styles[i % len(dash_styles)] for i, country in enumerate(plot_df_final['Country'].unique())}
 
             # Add traces for primary Y-axis (Generosity)
             if primary_y_variables:
@@ -360,9 +361,12 @@ if not trend_data_numeric.empty:
                                     y=country_data[metric],
                                     mode='lines+markers',
                                     name=f"{country} ({metric})",
-                                    line=dict(dash='solid'), # Generosity solid line
-                                    legendgroup=country,
-                                    showlegend=True
+                                    legendgroup=metric, # Group by metric for consistent color
+                                    showlegend=True,
+                                    line=dict(
+                                        color=metric_color_map.get(metric, 'black'), # Color by metric
+                                        dash=country_dash_map.get(country, 'solid') # Dash by country
+                                    )
                                 ),
                                 secondary_y=False, # Primary Y-axis
                             )
@@ -379,9 +383,12 @@ if not trend_data_numeric.empty:
                                     y=country_data[metric],
                                     mode='lines+markers',
                                     name=f"{country} ({metric})",
-                                    line=dict(dash='dash'), # Other factors dashed line
-                                    legendgroup=country,
-                                    showlegend=True
+                                    legendgroup=metric, # Group by metric for consistent color
+                                    showlegend=True,
+                                    line=dict(
+                                        color=metric_color_map.get(metric, 'black'), # Color by metric
+                                        dash=country_dash_map.get(country, 'solid') # Dash by country
+                                    )
                                 ),
                                 secondary_y=True, # Secondary Y-axis
                             )
@@ -413,3 +420,4 @@ st.markdown("""
 
 이러한 시각화는 데이터의 복잡성을 이해하는 데 유용하지만, 더 깊이 있는 통계적 추론을 위해서는 위에서 언급된 **혼합 효과 모델**이나 **패널 데이터 분석**과 같은 고급 방법론을 고려해야 합니다.
 """)
+
