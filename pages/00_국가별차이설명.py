@@ -27,8 +27,9 @@ def load_data():
         df = pd.read_csv('processed_whr.csv')
 
         # Raw column names from the CSV that we expect, based on user's input
+        # 'country' 컬럼이 CSV 파일에 'Country'로 되어 있을 가능성이 높으므로 수정합니다.
         expected_raw_columns = [
-            'country', 'year', 'generosity', 'life_ladder', 'log_gdp_per_capita',
+            'Country', 'year', 'generosity', 'life_ladder', 'log_gdp_per_capita',
             'social_support', 'healthy_life_expectancy_at_birth',
             'freedom_to_make_life_choices', 'perceptions_of_corruption',
             'positive_affect', 'negative_affect', 'confidence_in_national_government'
@@ -41,8 +42,9 @@ def load_data():
             return pd.DataFrame() # Return empty DataFrame to stop app execution
 
         # Rename columns for display in the app (user-friendly names)
+        # 'Country'가 이미 'Country'라면 이 rename은 효과가 없지만, 다른 컬럼들은 유지됩니다.
         df.rename(columns={
-            'country': 'Country',
+            'Country': 'Country', # CSV에 'Country'로 되어 있다면 이 줄은 실제 변경을 하지 않습니다.
             'year': 'Year',
             'generosity': 'Generosity',
             'life_ladder': 'Life Ladder',
@@ -214,11 +216,11 @@ with tab1: # Dashboard Overview
 
         st.subheader(f"{latest_year if latest_year else '전체'} 국가별 관대함 분포")
         fig_hist = px.histogram(current_df_for_tab1, x='Generosity', nbins=20,
-                                title='관대함 지수 분포',
-                                labels={'Generosity': '관대함 지수'},
-                                color_discrete_sequence=px.colors.qualitative.Pastel) # Improved color
+                                 title='관대함 지수 분포',
+                                 labels={'Generosity': '관대함 지수'},
+                                 color_discrete_sequence=px.colors.qualitative.Pastel) # Improved color
         fig_hist.update_layout(template="plotly_white", title_x=0.5, # Centered title, clean template
-                                margin=dict(t=50, b=50, l=50, r=50)) # Add margins
+                                 margin=dict(t=50, b=50, l=50, r=50)) # Add margins
         st.plotly_chart(fig_hist, use_container_width=True)
 
         # World Map Visualization ( Choropleth Map )
@@ -227,15 +229,15 @@ with tab1: # Dashboard Overview
         df_map = current_df_for_tab1.dropna(subset=['iso_alpha']).copy()
         if not df_map.empty:
             fig_map = px.choropleth(df_map,
-                                    locations="iso_alpha",
-                                    color="Generosity",
-                                    hover_name="Country",
-                                    # 관대함 지수가 음수일 때 붉은색 계열, 양수일 때 푸른색 계열
-                                    # 0 근처가 흰색으로 표시되지 않도록 RdYlBu 스케일 사용
-                                    color_continuous_scale=px.colors.diverging.RdYlBu, # Red-Yellow-Blue diverging scale
-                                    color_continuous_midpoint=0, # Set midpoint at 0 for diverging colors
-                                    title='세계 관대함 지수 지도',
-                                    labels={'Generosity': '관대함 지수'})
+                                     locations="iso_alpha",
+                                     color="Generosity",
+                                     hover_name="Country",
+                                     # 관대함 지수가 음수일 때 붉은색 계열, 양수일 때 푸른색 계열
+                                     # 0 근처가 흰색으로 표시되지 않도록 RdYlBu 스케일 사용
+                                     color_continuous_scale=px.colors.diverging.RdYlBu, # Red-Yellow-Blue diverging scale
+                                     color_continuous_midpoint=0, # Set midpoint at 0 for diverging colors
+                                     title='세계 관대함 지수 지도',
+                                     labels={'Generosity': '관대함 지수'})
             fig_map.update_layout(template="plotly_white", title_x=0.5,
                                   margin=dict(t=50, b=50, l=50, r=50))
             st.plotly_chart(fig_map, use_container_width=True)
