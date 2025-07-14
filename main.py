@@ -233,47 +233,47 @@ with tab1: # Dashboard Overview
         st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
 
 
-with tab2: # Country Details
-    st.header("🔍 국가 세부 정보 분석")
-    if not df_display.empty:
-        selected_country_detail = st.selectbox(
+with tab2: # Country Details - Modified for multi-country comparison
+    st.header("🔍 국가 세부 정보 및 연도별 추세 분석")
+    if not df.empty and 'Year' in df.columns: # df_display가 아닌 전체 df를 사용해 연도별 추세 분석
+        selected_countries_detail = st.multiselect(
             "세부 정보를 볼 국가를 선택하세요:",
-            options=df_display['Country'].sort_values().unique()
+            options=df['Country'].sort_values().unique(), # 전체 데이터셋에서 국가 선택
+            default=df['Country'].head(1).tolist() # 기본값으로 1개 국가 설정
         )
 
-        if selected_country_detail:
-            country_data_filtered_year = df_display[df_display['Country'] == selected_country_detail]
-            if not country_data_filtered_year.empty:
-                country_data = country_data_filtered_year.iloc[0] # 필터링된 연도에 대한 데이터
-                st.subheader(f"선택된 국가: {selected_country_detail}")
-                col_det1, col_det2 = st.columns(2)
-                with col_det1:
-                    st.metric(label="관대함 지수", value=f"{country_data['Generosity']:.3f}")
-                with col_det2:
-                    # 순위 계산 (현재 필터링된 데이터셋 내에서)
-                    df_sorted = df_display.sort_values(by='Generosity', ascending=False).reset_index(drop=True)
-                    rank = df_sorted[df_sorted['Country'] == selected_country_detail].index[0] + 1
-                    st.metric(label="전체 국가 중 순위", value=f"{int(rank)}위")
+        if selected_countries_detail:
+            # 선택된 국가들의 전체 연도 데이터 필터링
+            countries_time_series_data = df[df['Country'].isin(selected_countries_detail)].sort_values(['Country', 'Year'])
 
-                if 'Year' in df.columns:
-                    st.subheader(f"{selected_country_detail}의 관대함 지수 추세")
-                    # 전체 연도 데이터에서 해당 국가의 추세 그래프
-                    country_time_series = df[df['Country'] == selected_country_detail].sort_values('Year')
-                    if not country_time_series.empty:
-                        fig_line = px.line(country_time_series, x='Year', y='Generosity',
-                                           title=f'{selected_country_detail} 관대함 지수 추세',
-                                           labels={'Generosity': '관대함 지수', 'Year': '연도'},
-                                           markers=True, # Add markers for clarity
-                                           color_discrete_sequence=px.colors.qualitative.Plotly) # Consistent color
-                        fig_line.update_layout(template="plotly_white", title_x=0.5,
-                                               margin=dict(t=50, b=50, l=50, r=50))
-                        st.plotly_chart(fig_line, use_container_width=True)
-                    else:
-                        st.info("선택된 국가에 대한 연도별 데이터가 없습니다.")
+            if not countries_time_series_data.empty:
+                st.subheader(f"선택된 국가들의 관대함 지수 추세")
+                
+                # 라인 차트 (여러 국가 비교)
+                fig_line = px.line(countries_time_series_data, x='Year', y='Generosity',
+                                   color='Country', # 국가별로 다른 색상 적용
+                                   title=f'{", ".join(selected_countries_detail)} 관대함 지수 추세',
+                                   labels={'Generosity': '관대함 지수', 'Year': '연도'},
+                                   markers=True, # Add markers for clarity
+                                   color_discrete_sequence=px.colors.qualitative.Plotly) # Consistent color
+                fig_line.update_layout(template="plotly_white", title_x=0.5,
+                                       margin=dict(t=50, b=50, l=50, r=50))
+                st.plotly_chart(fig_line, use_container_width=True)
+
+                st.subheader(f"선택된 국가들의 최신 ({latest_year if latest_year else '전체'}년) 관대함 지수")
+                # 최신 연도 데이터에 대한 테이블 (선택된 국가만)
+                current_year_generosity = df_latest_year[df_latest_year['Country'].isin(selected_countries_detail)]
+                if not current_year_generosity.empty:
+                    st.dataframe(current_year_generosity[['Country', 'Generosity']].sort_values('Generosity', ascending=False).reset_index(drop=True), use_container_width=True)
                 else:
-                    st.info("관대함 지수 추세를 표시할 연도별 데이터가 없습니다.")
+                    st.info("선택된 국가에 대한 최신 연도 데이터가 없습니다.")
+
             else:
-                st.info("선택된 필터에 해당하는 국가 데이터가 없습니다.")
+                st.info("선택된 국가에 대한 연도별 데이터가 없습니다.")
+        else:
+            st.info("세부 정보를 볼 국가를 하나 이상 선택해주세요.")
+    elif 'Year' not in df.columns:
+        st.warning("연도별 데이터가 없어 국가 세부 정보 분석을 할 수 없습니다.")
     else:
         st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
 
