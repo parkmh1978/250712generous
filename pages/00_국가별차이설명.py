@@ -295,9 +295,12 @@ if not trend_data_numeric.empty:
     # Ensure '전체 평균' is at the beginning of options if not already there
     if '전체 평균' not in all_plot_countries_options:
         all_plot_countries_options.insert(0, '전체 평균')
-    # Remove 'South Korea' from options if it's already a default selection, to prevent duplication in the options list
-    if 'South Korea' in default_countries_selection and 'South Korea' in all_plot_countries_options:
-        all_plot_countries_options.remove('South Korea')
+    
+    # IMPORTANT FIX: Do NOT remove 'South Korea' from all_plot_countries_options.
+    # It must remain in options if it's in default_countries_selection.
+    # The previous line that removed 'South Korea' is now commented out/removed.
+    # if 'South Korea' in default_countries_selection and 'South Korea' in all_plot_countries_options:
+    #     all_plot_countries_options.remove('South Korea')
 
 
     selected_countries_for_plot = st.multiselect(
