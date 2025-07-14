@@ -24,7 +24,7 @@ def load_data():
     """
     try:
         # Streamlit Cloud에서는 파일을 앱과 같은 디렉토리에 두면 바로 접근 가능합니다.
-        df = pd.read_csv('processed_whr_short.csv')
+        df = pd.read_csv('processed_whr.csv')
 
         # 컬럼명 통일 (실제 파일의 컬럼명에 따라 'Country'와 'Generosity'가 정확한지 확인 필요)
         df.rename(columns={
