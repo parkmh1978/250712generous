@@ -414,8 +414,12 @@ with tab5: # Factor Analysis
                 correlation_data.dropna(inplace=True) # Drop NaNs after coercion
 
                 if not correlation_data.empty:
-                    # Check if there's enough variance for OLS trendline and at least 2 data points
-                    if correlation_data[factor].nunique() > 1 and correlation_data['Generosity'].nunique() > 1 and len(correlation_data) >= 2:
+                    # Check if there's enough variance (std dev > a very small number) for OLS trendline and at least 2 data points
+                    # 표준 편차가 0에 가까운 경우를 방지하여 OLS 에러를 줄입니다.
+                    if (correlation_data[factor].std() > 1e-9 and 
+                        correlation_data['Generosity'].std() > 1e-9 and 
+                        len(correlation_data) >= 2):
+                        
                         correlation = correlation_data['Generosity'].corr(correlation_data[factor])
                         st.metric(label=f"{factor}와 관대함 지수 간 피어슨 상관계수", value=f"{correlation:.3f}")
 
@@ -429,7 +433,7 @@ with tab5: # Factor Analysis
                                                   margin=dict(t=50, b=50, l=50, r=50))
                         st.plotly_chart(fig_scatter, use_container_width=True)
                     else:
-                        st.info(f"'{factor}' 또는 '관대함 지수' 데이터에 충분한 변화가 없거나 데이터 포인트가 부족하여 산점도 및 상관관계를 그릴 수 없습니다.")
+                        st.info(f"'{factor}' 또는 '관대함 지수' 데이터에 충분한 변화가 없거나 데이터 포인트가 부족하여 산점도 및 상관관계를 그릴 수 없습니다. (OLS 추세선 제외)")
                         # Optionally, plot scatter without trendline if data points are > 0 but not enough for OLS
                         if len(correlation_data) > 0:
                             fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
