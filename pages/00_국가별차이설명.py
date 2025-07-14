@@ -268,16 +268,17 @@ st.markdown("""
 """)
 
 # Prepare data for trend analysis
-trend_data_cols = ['Year', 'Country', 'Generosity'] + available_factors
+# available_factors에는 'Generosity'가 포함되어 있습니다.
+trend_data_cols = ['Year', 'Country'] + available_factors 
 trend_data_numeric = df[trend_data_cols].copy()
 
-for col in ['Generosity'] + available_factors:
+for col in available_factors: 
     trend_data_numeric[col] = pd.to_numeric(trend_data_numeric[col], errors='coerce')
-trend_data_numeric.dropna(subset=['Generosity'] + available_factors, inplace=True)
+trend_data_numeric.dropna(subset=available_factors, inplace=True) 
 
 if not trend_data_numeric.empty:
     # Calculate overall yearly average for Generosity and selected factors
-    yearly_overall_average = trend_data_numeric.groupby('Year')[['Generosity'] + available_factors].mean().reset_index()
+    yearly_overall_average = trend_data_numeric.groupby('Year')[available_factors].mean().reset_index()
     yearly_overall_average['Country'] = '전체 평균'
 
     # Get South Korea data
@@ -291,44 +292,57 @@ if not trend_data_numeric.empty:
     selected_countries_for_trend = st.multiselect(
         "추이를 비교할 추가 국가를 선택하세요:",
         options=all_countries_for_trend,
-        default=[]
+        default=[] # No default other than Korea
     )
 
     # Combine data for plotting
-    plot_df = yearly_overall_average.copy()
+    plot_df_base = yearly_overall_average.copy() # Start with overall average
     
     if not korea_data.empty:
-        plot_df = pd.concat([plot_df, korea_data])
+        plot_df_base = pd.concat([plot_df_base, korea_data])
     else:
         st.warning("데이터에 'South Korea'가 없어 해당 국가의 추이를 표시할 수 없습니다.")
     
     if selected_countries_for_trend:
         other_countries_data = trend_data_numeric[trend_data_numeric['Country'].isin(selected_countries_for_trend)].copy()
-        plot_df = pd.concat([plot_df, other_countries_data])
+        plot_df_base = pd.concat([plot_df_base, other_countries_data])
     
-    plot_df['Country'] = plot_df['Country'].astype('category')
+    # Ensure 'Country' is a categorical type for consistent plotting colors
+    plot_df_base['Country'] = plot_df_base['Country'].astype('category')
 
-    trend_variable_options = ['Generosity'] + available_factors
-    trend_variable = st.selectbox(
+    # Multiselect for variables to plot on the Y-axis
+    # 'Generosity' is default and always included
+    selected_trend_variables = st.multiselect(
         "추이를 볼 변수를 선택하세요:",
-        options=trend_variable_options,
-        index=0
+        options=available_factors,
+        default=['Generosity'] # Default to Generosity
     )
 
-    if trend_variable:
-        st.subheader(f"'{trend_variable}'의 연도별 추이")
-        fig_trend = px.line(plot_df, x='Year', y=trend_variable, color='Country',
-                            title=f'{trend_variable} 연도별 추이 (전체 평균 및 선택 국가)',
-                            labels={'Year': '연도', trend_variable: trend_variable},
+    if selected_trend_variables:
+        # Melt the DataFrame to long format for Plotly Express
+        melted_plot_df = pd.melt(plot_df_base, 
+                                 id_vars=['Year', 'Country'], 
+                                 value_vars=selected_trend_variables,
+                                 var_name='Metric', 
+                                 value_name='Value')
+
+        st.subheader(f"선택된 변수들의 연도별 추이")
+        fig_trend = px.line(melted_plot_df, x='Year', y='Value', 
+                            color='Country', # Differentiate lines by Country
+                            line_dash='Metric', # Differentiate lines by Metric (variable)
+                            title=f'선택된 변수들의 연도별 추이 (전체 평균 및 선택 국가)',
+                            labels={'Year': '연도', 'Value': '값', 'Metric': '변수'},
                             markers=True,
-                            color_discrete_sequence=px.colors.qualitative.Bold)
+                            color_discrete_sequence=px.colors.qualitative.Bold,
+                            # Make Generosity solid, others dashed
+                            line_dash_map={metric: 'solid' if metric == 'Generosity' else 'dash' for metric in selected_trend_variables}) 
         
         fig_trend.update_layout(template="plotly_white", title_x=0.5,
                                 margin=dict(t=50, b=50, l=50, r=50),
                                 hovermode="x unified")
         st.plotly_chart(fig_trend, use_container_width=True)
     else:
-        st.info("추이를 볼 변수를 선택해주세요.")
+        st.info("추이를 볼 변수를 하나 이상 선택해주세요.")
 else:
     st.warning("연도별 추이 분석을 위한 데이터가 부족합니다. 원본 데이터를 확인해주세요.")
 
