@@ -26,38 +26,46 @@ def load_data():
         # Streamlit Cloud에서는 파일을 앱과 같은 디렉토리에 두면 바로 접근 가능합니다.
         df = pd.read_csv('processed_whr.csv')
 
-        # 컬럼명 통일 (실제 파일의 컬럼명에 따라 'Country'와 'Generosity'가 정확한지 확인 필요)
+        # Raw column names from the CSV that we expect, based on user's input
+        expected_raw_columns = [
+            'country', 'year', 'generosity', 'fe_ladder', 'log_gdp_per_capita',
+            'social_support', 'healthy_life_expectancy_at_birth',
+            'freedom_to_make_life_choices', 'perceptions_of_corruption',
+            'positive_affect', 'negative_affect', 'confidence_in_national_government'
+        ]
+
+        # Check for missing required columns first
+        missing_columns_in_csv = [col for col in expected_raw_columns if col not in df.columns]
+        if missing_columns_in_csv:
+            st.error(f"필수 컬럼이 누락되었습니다: {', '.join(missing_columns_in_csv)}. 파일의 컬럼명을 확인해주세요.")
+            return pd.DataFrame() # Return empty DataFrame to stop app execution
+
+        # Rename columns for display in the app (user-friendly names)
         df.rename(columns={
             'country': 'Country',
-            'generosity': 'Generosity',
             'year': 'Year',
-            'gdp_per_capita': 'GDP per capita', # GDP 컬럼 추가
+            'generosity': 'Generosity',
+            'fe_ladder': 'Life Ladder',
+            'log_gdp_per_capita': 'Log GDP per capita',
             'social_support': 'Social Support',
-            'healthy_life_expectancy': 'Healthy Life Expectancy',
-            'freedom_to_make_life_choices': 'Freedom',
+            'healthy_life_expectancy_at_birth': 'Healthy Life Expectancy at Birth',
+            'freedom_to_make_life_choices': 'Freedom to Make Life Choices',
             'perceptions_of_corruption': 'Perceptions of Corruption',
-            'dystopia_residual': 'Dystopia Residual'
+            'positive_affect': 'Positive Affect',
+            'negative_affect': 'Negative Affect',
+            'confidence_in_national_government': 'Confidence in National Government'
         }, inplace=True)
 
-        # 필수 컬럼 확인 및 선택
-        required_columns = ['Country', 'Generosity']
-        if 'Year' in df.columns:
-            required_columns.append('Year')
-        else:
-            st.warning("경고: 'Year' 컬럼을 찾을 수 없습니다. 연도별 분석 기능이 비활성화됩니다.")
-        
-        # GDP 컬럼 확인 및 추가
-        if 'GDP per capita' in df.columns:
-            required_columns.append('GDP per capita')
-        else:
-            st.warning("경고: 'GDP per capita' 컬럼을 찾을 수 없습니다. 요인 분석 기능이 제한될 수 있습니다.")
-
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            st.error(f"필수 컬럼이 누락되었습니다: {', '.join(missing_columns)}. 파일의 컬럼명을 확인해주세요.")
-            return pd.DataFrame() # 빈 DataFrame 반환하여 앱 실행 중단
-
-        df = df[required_columns].copy() # SettingWithCopyWarning 방지를 위해 .copy() 사용
+        # Select only the columns that were successfully renamed and are needed
+        # Use the display names here
+        display_columns = [
+            'Country', 'Year', 'Generosity', 'Life Ladder', 'Log GDP per capita',
+            'Social Support', 'Healthy Life Expectancy at Birth',
+            'Freedom to Make Life Choices', 'Perceptions of Corruption',
+            'Positive Affect', 'Negative Affect', 'Confidence in National Government'
+        ]
+        # Filter df to only include columns that actually exist after renaming
+        df = df[[col for col in display_columns if col in df.columns]].copy()
 
         # --- 세계 지도 시각화를 위한 국가 코드 추가 ---
         # 더 포괄적인 매핑을 위해 pycountry 라이브러리 사용을 권장합니다.
@@ -360,55 +368,76 @@ with tab4: # Data Table
 with tab5: # Factor Analysis
     st.header("📈 관대함 지수 요인 분석")
     st.markdown("""
-    이 섹션에서는 국가별 관대함 지수와 특정 사회경제적 요인 간의 관계를 탐색합니다.
-    특히 **1인당 GDP (GDP per capita)**가 관대함에 미치는 영향을 최신 연도 데이터를 기반으로 분석합니다.
+    이 섹션에서는 국가별 관대함 지수와 다양한 사회경제적 요인 간의 관계를 탐색합니다.
+    최신 연도 데이터를 기반으로 선택된 요인들이 관대함에 미치는 영향을 분석합니다.
     """)
 
-    if 'GDP per capita' in df_latest_year.columns and not df_latest_year.empty:
-        st.subheader(f"💰 1인당 GDP와 관대함 지수 상관성 ({latest_year if latest_year else '전체'}년)")
-        
-        # GDP와 관대함 지수 간의 피어슨 상관계수 계산
-        # NaN 값이 있는 경우를 대비하여 dropna()를 사용
-        correlation_data = df_latest_year[['Generosity', 'GDP per capita']].dropna()
-        
-        if not correlation_data.empty:
-            correlation = correlation_data['Generosity'].corr(correlation_data['GDP per capita'])
-            st.metric(label="1인당 GDP와 관대함 지수 간 피어슨 상관계수", value=f"{correlation:.3f}")
+    # 분석에 사용할 요인 컬럼 목록 (표시 이름)
+    factor_columns = [
+        'Life Ladder', 'Log GDP per capita', 'Social Support',
+        'Healthy Life Expectancy at Birth', 'Freedom to Make Life Choices',
+        'Perceptions of Corruption', 'Positive Affect', 'Negative Affect',
+        'Confidence in National Government'
+    ]
+    
+    # df_latest_year에 실제로 존재하는 요인들만 필터링
+    available_factors = [col for col in factor_columns if col in df_latest_year.columns]
 
+    if not available_factors:
+        st.warning("분석할 수 있는 요인 컬럼이 데이터에 없습니다. `processed_whr.csv` 파일에 해당 컬럼들이 포함되어 있는지 확인해주세요.")
+    else:
+        selected_factors = st.multiselect(
+            "관대함 지수와의 상관성을 분석할 요인을 선택하세요:",
+            options=available_factors,
+            default=['Log GDP per capita'] if 'Log GDP per capita' in available_factors else (available_factors[0] if available_factors else [])
+        )
+
+        if selected_factors:
+            st.markdown(f"### 선택된 요인과 관대함 지수 상관성 ({latest_year if latest_year else '전체'}년)")
             st.markdown("""
             * **상관계수 해석:**
-                * `+1`에 가까울수록 양의 선형 관계 (GDP가 높을수록 관대함도 높음)
-                * `-1`에 가까울수록 음의 선형 관계 (GDP가 높을수록 관대함은 낮음)
+                * `+1`에 가까울수록 양의 선형 관계 (요인 값이 높을수록 관대함도 높음)
+                * `-1`에 가까울수록 음의 선형 관계 (요인 값이 높을수록 관대함은 낮음)
                 * `0`에 가까울수록 선형 관계가 약함
             """)
+            
+            for factor in selected_factors:
+                st.subheader(f"📊 {factor}와 관대함 지수")
+                
+                correlation_data = df_latest_year[['Generosity', factor]].dropna()
+                
+                if not correlation_data.empty:
+                    correlation = correlation_data['Generosity'].corr(correlation_data[factor])
+                    st.metric(label=f"{factor}와 관대함 지수 간 피어슨 상관계수", value=f"{correlation:.3f}")
 
-            # 산점도 그리기
-            fig_scatter = px.scatter(correlation_data, x='GDP per capita', y='Generosity',
-                                     hover_name='Country',
-                                     title='1인당 GDP vs. 관대함 지수',
-                                     labels={'GDP per capita': '1인당 GDP', 'Generosity': '관대함 지수'},
-                                     trendline='ols', # 선형 회귀 추세선 추가
-                                     color_discrete_sequence=px.colors.qualitative.Plotly)
-            fig_scatter.update_layout(template="plotly_white", title_x=0.5,
-                                      margin=dict(t=50, b=50, l=50, r=50))
-            st.plotly_chart(fig_scatter, use_container_width=True)
+                    # 산점도 그리기
+                    fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
+                                             hover_name='Country',
+                                             title=f'{factor} vs. 관대함 지수',
+                                             labels={factor: factor, 'Generosity': '관대함 지수'},
+                                             trendline='ols', # 선형 회귀 추세선 추가
+                                             color_discrete_sequence=px.colors.qualitative.Plotly)
+                    fig_scatter.update_layout(template="plotly_white", title_x=0.5,
+                                              margin=dict(t=50, b=50, l=50, r=50))
+                    st.plotly_chart(fig_scatter, use_container_width=True)
+                else:
+                    st.info(f"{factor}와 관대함 지수 상관관계를 분석할 데이터가 부족합니다. 해당 요인에 결측치가 많을 수 있습니다.")
+                st.markdown("---") # 각 요인 분석 섹션 구분
 
-            st.markdown("""
-            ---
-            ### 💡 고급 분석 고려사항: 반복 측정 데이터의 특성
-
-            이 분석은 특정 연도(최신 연도)의 데이터를 기반으로 한 **단순 상관관계**입니다.
-            국가별 관대함 지수는 여러 해에 걸쳐 반복 측정된 데이터이므로, 다음과 같은 특성을 고려한 고급 통계 분석이 필요할 수 있습니다.
-
-            * **국가 내 변화 (Within-country variation):** 각 국가의 관대함 지수가 시간이 지남에 따라 어떻게 변하는지.
-            * **국가 간 차이 (Between-country variation):** 국가마다 관대함 지수의 평균 수준이 다른 이유.
-            * **시간 효과 (Time effects):** 특정 연도에 전반적으로 관대함 지수가 높거나 낮아지는 경향.
-
-            단순 상관관계는 이러한 복합적인 요인들을 모두 설명하지 못하며, 특히 상관관계가 인과관계를 의미하지는 않습니다. 예를 들어, GDP가 관대함에 직접적인 영향을 미칠 수도 있지만, 다른 숨겨진 사회적, 문화적 요인들이 GDP와 관대함 모두에 영향을 미칠 수도 있습니다.
-
-            보다 심층적인 분석을 위해서는 **혼합 효과 모델(Mixed-effects models)** 또는 **패널 데이터 분석(Panel data analysis)**과 같은 통계 기법이 활용될 수 있습니다. 이러한 기법들은 국가별 고유한 특성과 시간 경과에 따른 변화를 동시에 고려하여 더 정확한 관계를 파악하는 데 도움을 줍니다.
-            """)
         else:
-            st.info("1인당 GDP와 관대함 지수 상관관계를 분석할 데이터가 부족합니다.")
-    else:
-        st.warning("데이터에 'GDP per capita' 컬럼이 없거나, 분석할 데이터가 없습니다. 원본 `processed_whr.csv` 파일에 해당 컬럼이 포함되어 있는지 확인해주세요.")
+            st.info("분석할 요인을 하나 이상 선택해주세요.")
+
+    st.markdown("""
+    ### 💡 고급 분석 고려사항: 반복 측정 데이터의 특성
+
+    이 분석은 특정 연도(최신 연도)의 데이터를 기반으로 한 **단순 상관관계**입니다.
+    국가별 관대함 지수는 여러 해에 걸쳐 반복 측정된 데이터이므로, 다음과 같은 특성을 고려한 고급 통계 분석이 필요할 수 있습니다.
+
+    * **국가 내 변화 (Within-country variation):** 각 국가의 관대함 지수가 시간이 지남에 따라 어떻게 변하는지.
+    * **국가 간 차이 (Between-country variation):** 국가마다 관대함 지수의 평균 수준이 다른 이유.
+    * **시간 효과 (Time effects):** 특정 연도에 전반적으로 관대함 지수가 높거나 낮아지는 경향.
+
+    단순 상관관계는 이러한 복합적인 요인들을 모두 설명하지 못하며, 특히 상관관계가 인과관계를 의미하지는 않습니다. 예를 들어, GDP가 관대함에 직접적인 영향을 미칠 수도 있지만, 다른 숨겨진 사회적, 문화적 요인들이 GDP와 관대함 모두에 영향을 미칠 수도 있습니다.
+
+    보다 심층적인 분석을 위해서는 **혼합 효과 모델(Mixed-effects models)** 또는 **패널 데이터 분석(Panel data analysis)**과 같은 통계 기법이 활용될 수 있습니다. 이러한 기법들은 국가별 고유한 특성과 시간 경과에 따른 변화를 동시에 고려하여 더 정확한 관계를 파악하는 데 도움을 줍니다.
+    """)
