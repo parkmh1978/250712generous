@@ -211,7 +211,8 @@ with tab1: # Dashboard Overview
                                     color="Generosity",
                                     hover_name="Country",
                                     # 관대함 지수가 음수일 때 붉은색 계열, 양수일 때 푸른색 계열
-                                    color_continuous_scale=px.colors.diverging.RdBu, # Red-Blue diverging scale
+                                    # 0 근처가 흰색으로 표시되지 않도록 RdYlBu 스케일 사용
+                                    color_continuous_scale=px.colors.diverging.RdYlBu, # Red-Yellow-Blue diverging scale
                                     color_continuous_midpoint=0, # Set midpoint at 0 for diverging colors
                                     title='세계 관대함 지수 지도',
                                     labels={'Generosity': '관대함 지수'})
