@@ -28,7 +28,7 @@ def load_data():
 
         # Raw column names from the CSV that we expect, based on user's input
         expected_raw_columns = [
-            'country', 'year', 'generosity', 'fe_ladder', 'log_gdp_per_capita',
+            'country', 'year', 'generosity', 'life_ladder', 'log_gdp_per_capita',
             'social_support', 'healthy_life_expectancy_at_birth',
             'freedom_to_make_life_choices', 'perceptions_of_corruption',
             'positive_affect', 'negative_affect', 'confidence_in_national_government'
@@ -45,7 +45,7 @@ def load_data():
             'country': 'Country',
             'year': 'Year',
             'generosity': 'Generosity',
-            'fe_ladder': 'Life Ladder',
+            'life_ladder': 'Life Ladder',
             'log_gdp_per_capita': 'Log GDP per capita',
             'social_support': 'Social Support',
             'healthy_life_expectancy_at_birth': 'Healthy Life Expectancy at Birth',
