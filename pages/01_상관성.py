@@ -5,7 +5,6 @@ import plotly.graph_objects as go # plotly.graph_objects 임포트
 from plotly.subplots import make_subplots # make_subplots 임포트
 import io
 
-!pip install statsmodels
 
 # --------------------
 # 1. 페이지 설정 (하위 페이지에도 설정 가능)
