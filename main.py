@@ -101,7 +101,7 @@ def load_data():
         # ISO 코드를 찾지 못한 국가에 대한 경고
         unmapped_countries = df[df['iso_alpha'].isnull()]['Country'].unique().tolist()
         if unmapped_countries:
-            st.warning(f"경고: 다음 국가들은 ISO 코드를 찾을 수 없어 지도에 표시되지 않을 수 있습니다: {', '.join(unmapped_countries)}")
+            st.warning(f"경고: 다음 국가들은 ISO 코드를 찾을 수 없어 지도에 표시되지 않을 수 있습니다: {', '.join(unmapped_countries)}. 'processed_whr.csv' 파일의 국가명과 코드 매핑을 확인해주세요.")
 
         return df
     except FileNotFoundError:
@@ -210,7 +210,9 @@ with tab1: # Dashboard Overview
                                     locations="iso_alpha",
                                     color="Generosity",
                                     hover_name="Country",
-                                    color_continuous_scale=px.colors.sequential.Viridis, # More visually appealing scale
+                                    # 관대함 지수가 음수일 때 붉은색 계열, 양수일 때 푸른색 계열
+                                    color_continuous_scale=px.colors.diverging.RdBu, # Red-Blue diverging scale
+                                    color_continuous_midpoint=0, # Set midpoint at 0 for diverging colors
                                     title='세계 관대함 지수 지도',
                                     labels={'Generosity': '관대함 지수'})
             fig_map.update_layout(template="plotly_white", title_x=0.5,
@@ -312,6 +314,14 @@ with tab4: # Data Table
     if not df_display.empty:
         st.write("필터링된 원본 데이터를 확인하고 정렬할 수 있습니다.")
         st.dataframe(df_display.sort_values(by='Generosity', ascending=False).reset_index(drop=True), use_container_width=True)
+
+        # Debugging section for unmapped countries
+        if 'iso_alpha' in df.columns:
+            unmapped_countries_all_data = df[df['iso_alpha'].isnull()]['Country'].unique().tolist()
+            if unmapped_countries_all_data:
+                st.subheader("⚠️ 지도에 표시되지 않는 국가 목록")
+                st.info(f"다음 국가들은 ISO 코드를 찾을 수 없어 지도에 표시되지 않습니다. `processed_whr.csv` 파일의 국가명과 코드 매핑을 확인해주세요: {', '.join(unmapped_countries_all_data)}")
+                st.markdown("---") # Separator
 
         st.subheader("앱 설명 및 배경 정보")
         st.markdown("""
