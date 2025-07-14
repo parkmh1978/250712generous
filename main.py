@@ -55,14 +55,13 @@ def load_data():
             'Germany': 'DEU', 'France': 'FRA', 'United Kingdom': 'GBR',
             'Japan': 'JPN', 'China': 'CHN', 'India': 'IND',
             'Australia': 'AUS', 'Brazil': 'BRA', 'Mexico': 'MEX',
-            'Russia': 'RUS', 'Spain': 'ESP', 'ITA': 'Italy', # 'ITA': 'Italy' -> 'Italy': 'ITA' 로 수정 (키-값 오류 수정)
-            'Italy': 'ITA', # 정확한 매핑을 위해 추가
+            'Russia': 'RUS', 'Spain': 'ESP', 'Italy': 'ITA',
             'Sweden': 'SWE', 'Norway': 'NOR', 'Denmark': 'DNK',
             'Finland': 'FIN', 'Switzerland': 'CHE', 'Netherlands': 'NLD',
             'Belgium': 'BEL', 'Austria': 'AUT', 'New Zealand': 'NZL',
             'Argentina': 'ARG', 'South Africa': 'ZAF', 'Egypt': 'EGY',
             'Nigeria': 'NGA', 'Indonesia': 'IDN', 'Turkey': 'TUR',
-            'Ireland': 'IRL', 'Luxembourg': 'LUX', 'Iceland': 'ISL', # 추가적인 국가들
+            'Ireland': 'IRL', 'Luxembourg': 'LUX', 'Iceland': 'ISL',
             'Israel': 'ISR', 'Chile': 'CHL', 'Colombia': 'COL',
             'Thailand': 'THA', 'Vietnam': 'VNM', 'Philippines': 'PHL',
             'Greece': 'GRC', 'Portugal': 'PRT', 'Poland': 'POL',
@@ -70,7 +69,32 @@ def load_data():
             'Romania': 'ROU', 'Bulgaria': 'BGR', 'Croatia': 'HRV',
             'Estonia': 'EST', 'Latvia': 'LVA', 'Lithuania': 'LTU',
             'Slovenia': 'SVN', 'Cyprus': 'CYP', 'Malta': 'MLT',
-            # Add more mappings as needed based on your CSV data
+            'Afghanistan': 'AFG', 'Albania': 'ALB', 'Algeria': 'DZA', 'Angola': 'AGO',
+            'Armenia': 'ARM', 'Azerbaijan': 'AZE', 'Bahrain': 'BHR', 'Bangladesh': 'BGD',
+            'Belarus': 'BLR', 'Benin': 'BEN', 'Bhutan': 'BTN', 'Bolivia': 'BOL',
+            'Bosnia and Herzegovina': 'BIH', 'Botswana': 'BWA', 'Burkina Faso': 'BFA',
+            'Burundi': 'BDI', 'Cambodia': 'KHM', 'Cameroon': 'CMR', 'Central African Republic': 'CAF',
+            'Chad': 'TCD', 'Comoros': 'COM', 'Congo (Brazzaville)': 'COG', 'Congo (Kinshasa)': 'COD',
+            'Costa Rica': 'CRI', 'Cote d\'Ivoire': 'CIV', 'Cuba': 'CUB', 'Djibouti': 'DJI',
+            'Dominican Republic': 'DOM', 'Ecuador': 'ECU', 'El Salvador': 'SLV', 'Equatorial Guinea': 'GNQ',
+            'Eritrea': 'ERI', 'Ethiopia': 'ETH', 'Fiji': 'FJI', 'Gabon': 'GAB', 'Gambia': 'GMB',
+            'Georgia': 'GEO', 'Ghana': 'GHA', 'Guatemala': 'GTM', 'Guinea': 'GIN', 'Guinea-Bissau': 'GNB',
+            'Guyana': 'GUY', 'Haiti': 'HTI', 'Honduras': 'HND', 'Hong Kong S.A.R., China': 'HKG',
+            'Iran': 'IRN', 'Iraq': 'IRQ', 'Jamaica': 'JAM', 'Jordan': 'JOR', 'Kazakhstan': 'KAZ',
+            'Kenya': 'KEN', 'Kosovo': 'XKX', 'Kuwait': 'KWT', 'Kyrgyzstan': 'KGZ', 'Laos': 'LAO',
+            'Lebanon': 'LBN', 'Lesotho': 'LSO', 'Liberia': 'LBR', 'Libya': 'LBY', 'Madagascar': 'MDG',
+            'Malawi': 'MWI', 'Malaysia': 'MYS', 'Maldives': 'MDV', 'Mali': 'MLI', 'Mauritania': 'MRT',
+            'Mauritius': 'MUS', 'Moldova': 'MDA', 'Mongolia': 'MNG', 'Montenegro': 'MNE',
+            'Morocco': 'MAR', 'Mozambique': 'MOZ', 'Myanmar': 'MMR', 'Namibia': 'NAM', 'Nepal': 'NPL',
+            'Nicaragua': 'NIC', 'Niger': 'NER', 'North Macedonia': 'MKD', 'Oman': 'OMN', 'Pakistan': 'PAK',
+            'Palestine': 'PSE', 'Panama': 'PAN', 'Papua New Guinea': 'PNG', 'Paraguay': 'PRY',
+            'Peru': 'PER', 'Qatar': 'QAT', 'Rwanda': 'RWA', 'Saudi Arabia': 'SAU', 'Senegal': 'SEN',
+            'Serbia': 'SRB', 'Sierra Leone': 'SLE', 'Singapore': 'SGP', 'Somalia': 'SOM',
+            'South Sudan': 'SSD', 'Sri Lanka': 'LKA', 'Sudan': 'SDN', 'Suriname': 'SUR',
+            'Syria': 'SYR', 'Taiwan Province of China': 'TWN', 'Tanzania': 'TZA', 'Togo': 'TGO',
+            'Trinidad and Tobago': 'TTO', 'Tunisia': 'TUN', 'Uganda': 'UGA', 'Ukraine': 'UKR',
+            'United Arab Emirates': 'ARE', 'Uruguay': 'URY', 'Uzbekistan': 'UZB', 'Venezuela': 'VEN',
+            'Yemen': 'YEM', 'Zambia': 'ZMB', 'Zimbabwe': 'ZWE'
         }
         df['iso_alpha'] = df['Country'].map(country_to_iso)
 
@@ -81,7 +105,7 @@ def load_data():
 
         return df
     except FileNotFoundError:
-        st.error("`processed_whr_short.csv` 파일을 찾을 수 없습니다. 파일을 업로드하거나 경로를 확인해주세요.")
+        st.error("`processed_whr.csv` 파일을 찾을 수 없습니다. 파일을 업로드하거나 경로를 확인해주세요.")
         return pd.DataFrame() # 빈 DataFrame 반환
     except Exception as e:
         st.error(f"데이터 로드 중 오류가 발생했습니다: {e}")
@@ -93,12 +117,16 @@ df = load_data()
 if df.empty:
     st.stop()
 
-# 최신 연도 데이터 (만약 Year 컬럼이 있다면)
+# 최신 연도 데이터 (대시보드 개요 탭용)
+df_latest_year = pd.DataFrame()
+latest_year = None
 if 'Year' in df.columns:
     latest_year = df['Year'].max()
-    df_latest = df[df['Year'] == latest_year].copy()
+    df_latest_year = df[df['Year'] == latest_year].copy()
 else:
-    df_latest = df.copy() # Year 컬럼이 없으면 전체 데이터 사용
+    st.warning("경고: 'Year' 컬럼이 없어 최신 연도 데이터 필터링이 불가능합니다. 모든 데이터를 사용합니다.")
+    df_latest_year = df.copy() # Year 컬럼이 없으면 전체 데이터 사용
+
 
 # --------------------
 # 3. 사이드바 - 앱 정보 및 필터
@@ -106,19 +134,19 @@ else:
 with st.sidebar:
     st.header("설정")
     st.write("이 앱은 세계 행복 보고서 데이터를 기반으로 국가별 관대함을 비교합니다.")
-    st.caption("데이터 출처: processed_whr_short.csv")
+    st.caption("데이터 출처: processed_whr.csv")
 
     df_display = df.copy() # 필터링을 위한 초기 DataFrame 복사
 
     if 'Year' in df.columns:
         st.subheader("데이터 연도 선택")
-        selected_year = st.slider(
+        selected_year_sidebar = st.slider( # 변수명 변경하여 충돌 방지
             "분석할 연도를 선택하세요:",
             int(df['Year'].min()),
             int(df['Year'].max()),
             int(df['Year'].max()) # 기본값으로 최신 연도 설정
         )
-        df_display = df[df['Year'] == selected_year].copy()
+        df_display = df[df['Year'] == selected_year_sidebar].copy()
     else:
         st.caption("연도별 데이터가 없습니다. 모든 가용 데이터를 사용합니다.")
 
@@ -144,51 +172,62 @@ st.title("🌍 국가 관대함 지수 비교")
 tab1, tab2, tab3, tab4 = st.tabs(["대시보드 개요", "국가 세부 정보", "국가 비교", "데이터 테이블"])
 
 with tab1: # Dashboard Overview
-    st.header("📊 대시보드 개요")
+    # 대시보드 개요 탭은 항상 최신 연도 데이터를 사용
+    st.header(f"📊 대시보드 개요 ({latest_year if latest_year else '전체'}년 데이터)")
+    
+    current_df_for_tab1 = df_latest_year 
 
-    if not df_display.empty:
+    if not current_df_for_tab1.empty:
         col1, col2 = st.columns(2)
 
         with col1:
-            avg_generosity = df_display['Generosity'].mean()
-            st.metric(label=f"{'선택된 연도' if 'Year' in df.columns else '전체'} 평균 관대함 지수", value=f"{avg_generosity:.3f}")
+            avg_generosity = current_df_for_tab1['Generosity'].mean()
+            st.metric(label=f"{latest_year if latest_year else '전체'}년 평균 관대함 지수", value=f"{avg_generosity:.3f}")
             st.write("### 🥇 관대함 지수 상위 5개국")
-            top_5_generosity = df_display.nlargest(5, 'Generosity')
+            top_5_generosity = current_df_for_tab1.nlargest(5, 'Generosity')
             st.dataframe(top_5_generosity[['Country', 'Generosity']].reset_index(drop=True), use_container_width=True)
 
         with col2:
             st.write("### 🥉 관대함 지수 하위 5개국")
-            bottom_5_generosity = df_display.nsmallest(5, 'Generosity')
+            bottom_5_generosity = current_df_for_tab1.nsmallest(5, 'Generosity')
             st.dataframe(bottom_5_generosity[['Country', 'Generosity']].reset_index(drop=True), use_container_width=True)
 
-        st.subheader(f"{'선택된 연도' if 'Year' in df.columns else '전체'} 국가별 관대함 분포")
-        fig_hist = px.histogram(df_display, x='Generosity', nbins=20,
+        st.subheader(f"{latest_year if latest_year else '전체'} 국가별 관대함 분포")
+        fig_hist = px.histogram(current_df_for_tab1, x='Generosity', nbins=20,
                                 title='관대함 지수 분포',
-                                labels={'Generosity': '관대함 지수'})
+                                labels={'Generosity': '관대함 지수'},
+                                color_discrete_sequence=px.colors.qualitative.Pastel) # Improved color
+        fig_hist.update_layout(template="plotly_white", title_x=0.5, # Centered title, clean template
+                                margin=dict(t=50, b=50, l=50, r=50)) # Add margins
         st.plotly_chart(fig_hist, use_container_width=True)
 
         # World Map Visualization ( Choropleth Map )
-        st.subheader(f"🗺️ {'선택된 연도' if 'Year' in df.columns else '전체'} 관대함 지수 세계 지도")
+        st.subheader(f"🗺️ {latest_year if latest_year else '전체'} 관대함 지수 세계 지도")
         # 지도 표시를 위해 ISO 코드가 있는 데이터만 필터링
-        df_map = df_display.dropna(subset=['iso_alpha']).copy() # .copy() 추가
+        df_map = current_df_for_tab1.dropna(subset=['iso_alpha']).copy()
         if not df_map.empty:
             fig_map = px.choropleth(df_map,
                                     locations="iso_alpha",
                                     color="Generosity",
                                     hover_name="Country",
-                                    color_continuous_scale=px.colors.sequential.Plasma, # 색상 스케일
+                                    color_continuous_scale=px.colors.sequential.Viridis, # More visually appealing scale
                                     title='세계 관대함 지수 지도',
                                     labels={'Generosity': '관대함 지수'})
+            fig_map.update_layout(template="plotly_white", title_x=0.5,
+                                  margin=dict(t=50, b=50, l=50, r=50))
             st.plotly_chart(fig_map, use_container_width=True)
         else:
             st.info("지도에 표시할 국가 데이터가 없습니다. ISO 코드가 매핑되지 않았거나 데이터가 필터링되었습니다.")
 
 
         # 모든 국가에 대한 막대 차트
-        st.subheader(f"{'선택된 연도' if 'Year' in df.columns else '전체'} 국가별 관대함 지수 (막대 차트)")
-        fig_bar_all = px.bar(df_display.sort_values('Generosity', ascending=False), x='Country', y='Generosity',
-                             title=f"{'선택된 연도' if 'Year' in df.columns else '전체'} 국가별 관대함 지수",
-                             labels={'Country': '국가', 'Generosity': '관대함 지수'})
+        st.subheader(f"{latest_year if latest_year else '전체'} 국가별 관대함 지수 (막대 차트)")
+        fig_bar_all = px.bar(current_df_for_tab1.sort_values('Generosity', ascending=False), x='Country', y='Generosity',
+                             title=f"{latest_year if latest_year else '전체'} 국가별 관대함 지수",
+                             labels={'Country': '국가', 'Generosity': '관대함 지수'},
+                             color_discrete_sequence=px.colors.qualitative.D3) # Another good qualitative scale
+        fig_bar_all.update_layout(template="plotly_white", title_x=0.5,
+                                  margin=dict(t=50, b=50, l=50, r=50))
         st.plotly_chart(fig_bar_all, use_container_width=True)
     else:
         st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
@@ -223,7 +262,11 @@ with tab2: # Country Details
                     if not country_time_series.empty:
                         fig_line = px.line(country_time_series, x='Year', y='Generosity',
                                            title=f'{selected_country_detail} 관대함 지수 추세',
-                                           labels={'Generosity': '관대함 지수', 'Year': '연도'})
+                                           labels={'Generosity': '관대함 지수', 'Year': '연도'},
+                                           markers=True, # Add markers for clarity
+                                           color_discrete_sequence=px.colors.qualitative.Plotly) # Consistent color
+                        fig_line.update_layout(template="plotly_white", title_x=0.5,
+                                               margin=dict(t=50, b=50, l=50, r=50))
                         st.plotly_chart(fig_line, use_container_width=True)
                     else:
                         st.info("선택된 국가에 대한 연도별 데이터가 없습니다.")
@@ -244,14 +287,17 @@ with tab3: # Country Comparison
         )
 
         if compare_countries:
-            compare_df = df_display[df_display['Country'].isin(compare_countries)].sort_values('Generosity', ascending=False).copy() # .copy() 추가
+            compare_df = df_display[df_display['Country'].isin(compare_countries)].sort_values('Generosity', ascending=False).copy()
             st.subheader("선택된 국가별 관대함 지수 비교")
             fig_compare = px.bar(compare_df, x='Country', y='Generosity',
                                  title='국가별 관대함 지수 비교',
                                  labels={'Country': '국가', 'Generosity': '관대함 지수'},
                                  color='Country',
-                                 text='Generosity') # 값 표시
+                                 text='Generosity',
+                                 color_discrete_sequence=px.colors.qualitative.Safe) # Another good qualitative scale
             fig_compare.update_traces(texttemplate='%{text:.3f}', textposition='outside')
+            fig_compare.update_layout(template="plotly_white", title_x=0.5,
+                                      margin=dict(t=50, b=50, l=50, r=50))
             st.plotly_chart(fig_compare, use_container_width=True)
 
             st.subheader("선택된 국가에 대한 상세 비교 테이블")
@@ -285,6 +331,3 @@ with tab4: # Data Table
         """)
     else:
         st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
-
-
-
