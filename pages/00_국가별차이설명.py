@@ -312,10 +312,12 @@ if not trend_data_numeric.empty:
 
     # Multiselect for variables to plot on the Y-axis
     # 'Generosity' is default and always included
+    # 기본값을 설정할 때, 'Generosity'가 available_factors에 있는지 확인합니다.
+    default_trend_variables = ['Generosity'] if 'Generosity' in available_factors else []
     selected_trend_variables = st.multiselect(
         "추이를 볼 변수를 선택하세요:",
         options=available_factors,
-        default=['Generosity'] # Default to Generosity
+        default=default_trend_variables # Default to Generosity if available
     )
 
     if selected_trend_variables:
