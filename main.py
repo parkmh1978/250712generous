@@ -9,7 +9,7 @@ import io
 # --------------------
 st.set_page_config(
     page_title="국가별 관대함 비교 웹 앱",
-    page_icon="�",
+    page_icon="🌍",
     layout="wide"
 )
 
@@ -344,4 +344,3 @@ with tab4: # Data Table
         """)
     else:
         st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
-�
