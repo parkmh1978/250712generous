@@ -5,7 +5,6 @@ import plotly.graph_objects as go # plotly.graph_objects 임포트
 from plotly.subplots import make_subplots # make_subplots 임포트
 import io
 
-
 # --------------------
 # 1. 페이지 설정 (하위 페이지에도 설정 가능)
 # --------------------
@@ -134,7 +133,7 @@ latest_year = df['Year'].max() if 'Year' in df.columns else None
 # --------------------
 # 3. 요인 분석 섹션
 # --------------------
-st.header("� 관대함 지수 요인 분석")
+st.header("📈 관대함 지수 요인 분석")
 st.markdown("""
 이 섹션에서는 국가별 관대함 지수와 다양한 사회경제적 요인 간의 관계를 탐색합니다.
 **전체 연도 데이터**를 기반으로 선택된 요인들이 관대함에 미치는 영향을 분석합니다.
@@ -247,12 +246,53 @@ else:
                     country_df = correlation_data[correlation_data['Country'] == country]
                     if len(country_df) >= 2 and country_df[factor].std() > 1e-9 and country_df['Generosity'].std() > 1e-9:
                         corr = country_df['Generosity'].corr(country_df[factor])
-                        country_correlations.append(corr)
+                        country_correlations.append({'Country': country, 'Correlation': corr})
                 
                 if country_correlations:
-                    avg_within_country_corr = pd.Series(country_correlations).mean()
+                    country_corr_df = pd.DataFrame(country_correlations)
+                    avg_within_country_corr = country_corr_df['Correlation'].mean()
                     st.metric(label=f"국가 내 '{factor}'와 관대함 지수 간 평균 피어슨 상관계수", value=f"{avg_within_country_corr:.3f}")
                     st.info(f"({len(country_correlations)}개 국가의 상관계수 평균)")
+
+                    # 상관관계 상위 3개국, 하위 3개국 추출
+                    top_3_countries = country_corr_df.nlargest(3, 'Correlation')['Country'].tolist()
+                    bottom_3_countries = country_corr_df.nsmallest(3, 'Correlation')['Country'].tolist()
+
+                    st.markdown("---")
+                    st.markdown(f"#### 🎯 '{factor}'와 관대함 지수 상관성 주요 국가")
+                    
+                    # Plotting specific countries for correlation scatter plot
+                    countries_to_plot_corr = set(['전체 평균', 'South Korea']) # Use a set to avoid duplicates
+                    countries_to_plot_corr.update(top_3_countries)
+                    countries_to_plot_corr.update(bottom_3_countries)
+                    
+                    # Filter correlation_data for these specific countries
+                    # If '전체 평균' is included, it should come from the yearly_overall_average, not correlation_data directly
+                    # For this specific scatter plot, we'll just filter the original correlation_data
+                    # and add '전체 평균' as a separate trace if needed.
+                    
+                    # For scatter plot, we need data for each country.
+                    # We'll re-filter the original df for specific countries.
+                    specific_countries_data = df[df['Country'].isin(list(countries_to_plot_corr))].copy()
+                    specific_countries_data['Generosity'] = pd.to_numeric(specific_countries_data['Generosity'], errors='coerce')
+                    specific_countries_data[factor] = pd.to_numeric(specific_countries_data[factor], errors='coerce')
+                    specific_countries_data.dropna(subset=['Generosity', factor], inplace=True)
+
+                    if not specific_countries_data.empty:
+                        fig_specific_scatter = px.scatter(specific_countries_data, x=factor, y='Generosity',
+                                                          hover_name='Country',
+                                                          color='Country', # Color by country
+                                                          title=f"'{factor}' vs. 관대함 지수 (주요 국가)",
+                                                          labels={factor: factor, 'Generosity': '관대함 지수'},
+                                                          trendline='ols', # OLS 추세선 추가
+                                                          color_discrete_sequence=px.colors.qualitative.Bold) # Use a bold palette
+                        
+                        fig_specific_scatter.update_layout(template="plotly_white", title_x=0.5,
+                                                            margin=dict(t=50, b=50, l=50, r=50))
+                        st.plotly_chart(fig_specific_scatter, use_container_width=True)
+                    else:
+                        st.info("선택된 주요 국가에 대한 데이터가 부족하여 산점도를 그릴 수 없습니다.")
+
                 else:
                     st.info("각 국가 내에서 상관계수를 계산하기에 충분한 데이터가 없습니다.")
 
@@ -271,7 +311,6 @@ st.markdown("""
 """)
 
 # Prepare data for trend analysis
-# available_factors에는 'Generosity'가 포함되어 있습니다.
 trend_data_cols = ['Year', 'Country'] + available_factors 
 trend_data_numeric = df[trend_data_cols].copy()
 
@@ -421,4 +460,3 @@ st.markdown("""
 
 이러한 시각화는 데이터의 복잡성을 이해하는 데 유용하지만, 더 깊이 있는 통계적 추론을 위해서는 위에서 언급된 **혼합 효과 모델**이나 **패널 데이터 분석**과 같은 고급 방법론을 고려해야 합니다.
 """)
-
