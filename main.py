@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import altair as alt
+import altair as alt # Although imported, Altair is not explicitly used in chart generation in this specific code.
 import io
 
 # --------------------
@@ -23,60 +23,68 @@ def load_data():
     세계 지도 시각화를 위해 국가명과 ISO-ALPHA-3 코드 매핑을 시도합니다.
     """
     try:
+        # Streamlit Cloud에서는 파일을 앱과 같은 디렉토리에 두면 바로 접근 가능합니다.
         df = pd.read_csv('processed_whr_short.csv')
-        # 컬럼명 통일 (예시: 실제 파일의 컬럼명에 따라 조정 필요)
+
+        # 컬럼명 통일 (실제 파일의 컬럼명에 따라 'Country'와 'Generosity'가 정확한지 확인 필요)
         df.rename(columns={
             'country': 'Country',
-            'Country': 'Country', # 이미 'Country'인 경우를 대비
             'generosity': 'Generosity',
-            'Generosity': 'Generosity', # 이미 'Generosity'인 경우를 대비
-            'year': 'Year', # 'Year' 컬럼이 있다면 사용
-            'Year': 'Year' # 이미 'Year'인 경우를 대비
+            'year': 'Year'
         }, inplace=True)
 
-        # 필요한 컬럼만 선택
+        # 필수 컬럼 확인 및 선택
         required_columns = ['Country', 'Generosity']
         if 'Year' in df.columns:
             required_columns.append('Year')
         else:
-            st.warning("Warning: 'Year' column not found. Year-based analysis features will be disabled.")
+            st.warning("경고: 'Year' 컬럼을 찾을 수 없습니다. 연도별 분석 기능이 비활성화됩니다.")
 
-        # 필수 컬럼이 모두 있는지 확인
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            st.error(f"Missing required columns: {', '.join(missing_columns)}. Please check your file's column names.")
-            return pd.DataFrame()
+            st.error(f"필수 컬럼이 누락되었습니다: {', '.join(missing_columns)}. 파일의 컬럼명을 확인해주세요.")
+            return pd.DataFrame() # 빈 DataFrame 반환하여 앱 실행 중단
 
-        df = df[required_columns]
+        df = df[required_columns].copy() # SettingWithCopyWarning 방지를 위해 .copy() 사용
 
         # --- 세계 지도 시각화를 위한 국가 코드 추가 ---
-        # 실제 앱에서는 더 포괄적인 매핑 또는 pycountry 같은 라이브러리 사용을 권장합니다.
-        # 여기서는 예시를 위해 몇몇 국가만 매핑합니다.
+        # 더 포괄적인 매핑을 위해 pycountry 라이브러리 사용을 권장합니다.
+        # 여기서는 예시를 위해 일부 국가만 수동 매핑합니다.
         country_to_iso = {
             'South Korea': 'KOR', 'United States': 'USA', 'Canada': 'CAN',
             'Germany': 'DEU', 'France': 'FRA', 'United Kingdom': 'GBR',
             'Japan': 'JPN', 'China': 'CHN', 'India': 'IND',
             'Australia': 'AUS', 'Brazil': 'BRA', 'Mexico': 'MEX',
-            'Russia': 'RUS', 'Spain': 'ESP', 'Italy': 'ITA',
+            'Russia': 'RUS', 'Spain': 'ESP', 'ITA': 'Italy', # 'ITA': 'Italy' -> 'Italy': 'ITA' 로 수정 (키-값 오류 수정)
+            'Italy': 'ITA', # 정확한 매핑을 위해 추가
             'Sweden': 'SWE', 'Norway': 'NOR', 'Denmark': 'DNK',
             'Finland': 'FIN', 'Switzerland': 'CHE', 'Netherlands': 'NLD',
             'Belgium': 'BEL', 'Austria': 'AUT', 'New Zealand': 'NZL',
             'Argentina': 'ARG', 'South Africa': 'ZAF', 'Egypt': 'EGY',
             'Nigeria': 'NGA', 'Indonesia': 'IDN', 'Turkey': 'TUR',
+            'Ireland': 'IRL', 'Luxembourg': 'LUX', 'Iceland': 'ISL', # 추가적인 국가들
+            'Israel': 'ISR', 'Chile': 'CHL', 'Colombia': 'COL',
+            'Thailand': 'THA', 'Vietnam': 'VNM', 'Philippines': 'PHL',
+            'Greece': 'GRC', 'Portugal': 'PRT', 'Poland': 'POL',
+            'Hungary': 'HUN', 'Czech Republic': 'CZE', 'Slovakia': 'SVK',
+            'Romania': 'ROU', 'Bulgaria': 'BGR', 'Croatia': 'HRV',
+            'Estonia': 'EST', 'Latvia': 'LVA', 'Lithuania': 'LTU',
+            'Slovenia': 'SVN', 'Cyprus': 'CYP', 'Malta': 'MLT',
             # Add more mappings as needed based on your CSV data
         }
         df['iso_alpha'] = df['Country'].map(country_to_iso)
+
         # ISO 코드를 찾지 못한 국가에 대한 경고
-        if df['iso_alpha'].isnull().any():
-            st.warning("Warning: Some countries could not be mapped to ISO codes and may not appear on the map.")
-            st.warning("Missing countries: " + ", ".join(df[df['iso_alpha'].isnull()]['Country'].unique().tolist()))
+        unmapped_countries = df[df['iso_alpha'].isnull()]['Country'].unique().tolist()
+        if unmapped_countries:
+            st.warning(f"경고: 다음 국가들은 ISO 코드를 찾을 수 없어 지도에 표시되지 않을 수 있습니다: {', '.join(unmapped_countries)}")
 
         return df
     except FileNotFoundError:
-        st.error("`processed_whr_short.csv` file not found. Please upload the file or check the path.")
-        return pd.DataFrame() # Return empty DataFrame
+        st.error("`processed_whr_short.csv` 파일을 찾을 수 없습니다. 파일을 업로드하거나 경로를 확인해주세요.")
+        return pd.DataFrame() # 빈 DataFrame 반환
     except Exception as e:
-        st.error(f"Error loading data: {e}")
+        st.error(f"데이터 로드 중 오류가 발생했습니다: {e}")
         return pd.DataFrame()
 
 df = load_data()
@@ -96,180 +104,184 @@ else:
 # 3. 사이드바 - 앱 정보 및 필터
 # --------------------
 with st.sidebar:
-    st.header("Settings")
-    st.write("This app compares generosity by country based on World Happiness Report data.")
-    st.caption("Data source: processed_whr_short.csv")
+    st.header("설정")
+    st.write("이 앱은 세계 행복 보고서 데이터를 기반으로 국가별 관대함을 비교합니다.")
+    st.caption("데이터 출처: processed_whr_short.csv")
 
-    df_display = df.copy() # Filtering initial DataFrame
+    df_display = df.copy() # 필터링을 위한 초기 DataFrame 복사
 
     if 'Year' in df.columns:
-        st.subheader("Select Data Year")
+        st.subheader("데이터 연도 선택")
         selected_year = st.slider(
-            "Select the year for analysis",
+            "분석할 연도를 선택하세요:",
             int(df['Year'].min()),
             int(df['Year'].max()),
-            int(df['Year'].max()) # Set latest year as default
+            int(df['Year'].max()) # 기본값으로 최신 연도 설정
         )
         df_display = df[df['Year'] == selected_year].copy()
     else:
-        st.caption("No year-specific data. Using all available data.")
-        # df_display is already initialized with all data
+        st.caption("연도별 데이터가 없습니다. 모든 가용 데이터를 사용합니다.")
 
     if not df_display.empty:
-        st.subheader("Generosity Index Range Filter")
+        st.subheader("관대함 지수 범위 필터")
         min_generosity, max_generosity = st.slider(
-            "Generosity index range",
+            "관대함 지수 범위:",
             float(df_display['Generosity'].min()),
             float(df_display['Generosity'].max()),
             (float(df_display['Generosity'].min()), float(df_display['Generosity'].max()))
         )
         df_display = df_display[(df_display['Generosity'] >= min_generosity) & (df_display['Generosity'] <= max_generosity)]
     else:
-        st.warning("No data to filter.")
+        st.warning("필터링할 데이터가 없습니다.")
 
 
 # --------------------
 # 4. 메인 컨텐츠 영역
 # --------------------
-st.title("🌍 Country Generosity Index Comparison")
+st.title("🌍 국가 관대함 지수 비교")
 
 # 탭 구현
-tab1, tab2, tab3, tab4 = st.tabs(["Dashboard Overview", "Country Details", "Country Comparison", "Data Table"])
+tab1, tab2, tab3, tab4 = st.tabs(["대시보드 개요", "국가 세부 정보", "국가 비교", "데이터 테이블"])
 
 with tab1: # Dashboard Overview
-    st.header("📊 Dashboard Overview")
+    st.header("📊 대시보드 개요")
 
     if not df_display.empty:
         col1, col2 = st.columns(2)
 
         with col1:
             avg_generosity = df_display['Generosity'].mean()
-            st.metric(label=f"{'Selected Year' if 'Year' in df.columns else 'Overall'} Average Generosity Index", value=f"{avg_generosity:.3f}")
-            st.write("### 🥇 Top 5 Most Generous Countries")
+            st.metric(label=f"{'선택된 연도' if 'Year' in df.columns else '전체'} 평균 관대함 지수", value=f"{avg_generosity:.3f}")
+            st.write("### 🥇 관대함 지수 상위 5개국")
             top_5_generosity = df_display.nlargest(5, 'Generosity')
             st.dataframe(top_5_generosity[['Country', 'Generosity']].reset_index(drop=True), use_container_width=True)
 
         with col2:
-            st.write("### 🥉 Bottom 5 Least Generous Countries")
+            st.write("### 🥉 관대함 지수 하위 5개국")
             bottom_5_generosity = df_display.nsmallest(5, 'Generosity')
             st.dataframe(bottom_5_generosity[['Country', 'Generosity']].reset_index(drop=True), use_container_width=True)
 
-        st.subheader(f"{'Selected Year' if 'Year' in df.columns else 'Overall'} Generosity Distribution by Country")
+        st.subheader(f"{'선택된 연도' if 'Year' in df.columns else '전체'} 국가별 관대함 분포")
         fig_hist = px.histogram(df_display, x='Generosity', nbins=20,
-                                title='Generosity Index Distribution',
-                                labels={'Generosity': 'Generosity Index'})
+                                title='관대함 지수 분포',
+                                labels={'Generosity': '관대함 지수'})
         st.plotly_chart(fig_hist, use_container_width=True)
 
         # World Map Visualization ( Choropleth Map )
-        st.subheader(f"🗺️ {'Selected Year' if 'Year' in df.columns else 'Overall'} Generosity Index World Map")
-        # Filter data with ISO codes for map display
-        df_map = df_display.dropna(subset=['iso_alpha'])
+        st.subheader(f"🗺️ {'선택된 연도' if 'Year' in df.columns else '전체'} 관대함 지수 세계 지도")
+        # 지도 표시를 위해 ISO 코드가 있는 데이터만 필터링
+        df_map = df_display.dropna(subset=['iso_alpha']).copy() # .copy() 추가
         if not df_map.empty:
             fig_map = px.choropleth(df_map,
                                     locations="iso_alpha",
                                     color="Generosity",
                                     hover_name="Country",
-                                    color_continuous_scale=px.colors.sequential.Plasma, # Color scale
-                                    title='World Map of Generosity Index',
-                                    labels={'Generosity': 'Generosity Index'})
+                                    color_continuous_scale=px.colors.sequential.Plasma, # 색상 스케일
+                                    title='세계 관대함 지수 지도',
+                                    labels={'Generosity': '관대함 지수'})
             st.plotly_chart(fig_map, use_container_width=True)
         else:
-            st.info("No country data to display on the map. Either no ISO codes are mapped or data is filtered out.")
+            st.info("지도에 표시할 국가 데이터가 없습니다. ISO 코드가 매핑되지 않았거나 데이터가 필터링되었습니다.")
 
 
-        # Simple Bar Chart for all countries
-        st.subheader(f"{'Selected Year' if 'Year' in df.columns else 'Overall'} Generosity Index by Country (Bar Chart)")
+        # 모든 국가에 대한 막대 차트
+        st.subheader(f"{'선택된 연도' if 'Year' in df.columns else '전체'} 국가별 관대함 지수 (막대 차트)")
         fig_bar_all = px.bar(df_display.sort_values('Generosity', ascending=False), x='Country', y='Generosity',
-                             title=f"{'Selected Year' if 'Year' in df.columns else 'Overall'} Generosity Index by Country",
-                             labels={'Country': 'Country', 'Generosity': 'Generosity Index'})
+                             title=f"{'선택된 연도' if 'Year' in df.columns else '전체'} 국가별 관대함 지수",
+                             labels={'Country': '국가', 'Generosity': '관대함 지수'})
         st.plotly_chart(fig_bar_all, use_container_width=True)
     else:
-        st.warning("No data to display. Adjust filters or check original data.")
+        st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
 
 
 with tab2: # Country Details
-    st.header("🔍 Country Details Analysis")
+    st.header("🔍 국가 세부 정보 분석")
     if not df_display.empty:
         selected_country_detail = st.selectbox(
-            "Select a country to view details:",
+            "세부 정보를 볼 국가를 선택하세요:",
             options=df_display['Country'].sort_values().unique()
         )
 
         if selected_country_detail:
-            country_data = df_display[df_display['Country'] == selected_country_detail].iloc[0]
-            st.subheader(f"Selected Country: {selected_country_detail}")
-            col_det1, col_det2 = st.columns(2)
-            with col_det1:
-                st.metric(label="Generosity Index", value=f"{country_data['Generosity']:.3f}")
-            with col_det2:
-                # Calculate rank
-                df_sorted = df_display.sort_values(by='Generosity', ascending=False).reset_index(drop=True)
-                rank = df_sorted[df_sorted['Country'] == selected_country_detail].index[0] + 1
-                st.metric(label="Rank among all countries", value=f"{int(rank)}th")
+            country_data_filtered_year = df_display[df_display['Country'] == selected_country_detail]
+            if not country_data_filtered_year.empty:
+                country_data = country_data_filtered_year.iloc[0] # 필터링된 연도에 대한 데이터
+                st.subheader(f"선택된 국가: {selected_country_detail}")
+                col_det1, col_det2 = st.columns(2)
+                with col_det1:
+                    st.metric(label="관대함 지수", value=f"{country_data['Generosity']:.3f}")
+                with col_det2:
+                    # 순위 계산 (현재 필터링된 데이터셋 내에서)
+                    df_sorted = df_display.sort_values(by='Generosity', ascending=False).reset_index(drop=True)
+                    rank = df_sorted[df_sorted['Country'] == selected_country_detail].index[0] + 1
+                    st.metric(label="전체 국가 중 순위", value=f"{int(rank)}위")
 
-            if 'Year' in df.columns:
-                st.subheader(f"{selected_country_detail}'s Generosity Index Trend")
-                country_time_series = df[df['Country'] == selected_country_detail].sort_values('Year')
-                if not country_time_series.empty:
-                    fig_line = px.line(country_time_series, x='Year', y='Generosity',
-                                       title=f'{selected_country_detail} Generosity Index Trend',
-                                       labels={'Generosity': 'Generosity Index', 'Year': 'Year'})
-                    st.plotly_chart(fig_line, use_container_width=True)
+                if 'Year' in df.columns:
+                    st.subheader(f"{selected_country_detail}의 관대함 지수 추세")
+                    # 전체 연도 데이터에서 해당 국가의 추세 그래프
+                    country_time_series = df[df['Country'] == selected_country_detail].sort_values('Year')
+                    if not country_time_series.empty:
+                        fig_line = px.line(country_time_series, x='Year', y='Generosity',
+                                           title=f'{selected_country_detail} 관대함 지수 추세',
+                                           labels={'Generosity': '관대함 지수', 'Year': '연도'})
+                        st.plotly_chart(fig_line, use_container_width=True)
+                    else:
+                        st.info("선택된 국가에 대한 연도별 데이터가 없습니다.")
                 else:
-                    st.info("No year-specific data for the selected country.")
+                    st.info("관대함 지수 추세를 표시할 연도별 데이터가 없습니다.")
             else:
-                st.info("No year-specific data available to display generosity index trends.")
+                st.info("선택된 필터에 해당하는 국가 데이터가 없습니다.")
     else:
-        st.warning("No data to display. Adjust filters or check original data.")
+        st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
 
 with tab3: # Country Comparison
-    st.header("🆚 Country Comparison Analysis")
+    st.header("🆚 국가 비교 분석")
     if not df_display.empty:
         compare_countries = st.multiselect(
-            "Select countries to compare (up to 5 recommended):",
+            "비교할 국가를 선택하세요 (5개 이하 권장):",
             options=df_display['Country'].sort_values().unique(),
-            default=df_display['Country'].head(2).tolist() # Default to 2 countries
+            default=df_display['Country'].head(2).tolist() # 기본값으로 2개 국가 설정
         )
 
         if compare_countries:
-            compare_df = df_display[df_display['Country'].isin(compare_countries)].sort_values('Generosity', ascending=False)
-            st.subheader("Generosity Index Comparison by Selected Countries")
+            compare_df = df_display[df_display['Country'].isin(compare_countries)].sort_values('Generosity', ascending=False).copy() # .copy() 추가
+            st.subheader("선택된 국가별 관대함 지수 비교")
             fig_compare = px.bar(compare_df, x='Country', y='Generosity',
-                                 title='Generosity Index Comparison by Country',
-                                 labels={'Country': 'Country', 'Generosity': 'Generosity Index'},
+                                 title='국가별 관대함 지수 비교',
+                                 labels={'Country': '국가', 'Generosity': '관대함 지수'},
                                  color='Country',
-                                 text='Generosity') # Display values
+                                 text='Generosity') # 값 표시
             fig_compare.update_traces(texttemplate='%{text:.3f}', textposition='outside')
             st.plotly_chart(fig_compare, use_container_width=True)
 
-            st.subheader("Detailed Comparison Table for Selected Countries")
+            st.subheader("선택된 국가에 대한 상세 비교 테이블")
             st.dataframe(compare_df[['Country', 'Generosity']].reset_index(drop=True), use_container_width=True)
         else:
-            st.info("Please select one or more countries to compare.")
+            st.info("비교할 국가를 하나 이상 선택해주세요.")
     else:
-        st.warning("No data to compare. Adjust filters or check original data.")
+        st.warning("비교할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
 
 with tab4: # Data Table
-    st.header("📋 Raw Data Table")
+    st.header("📋 원본 데이터 테이블")
     if not df_display.empty:
-        st.write("You can view and sort the filtered raw data.")
+        st.write("필터링된 원본 데이터를 확인하고 정렬할 수 있습니다.")
         st.dataframe(df_display.sort_values(by='Generosity', ascending=False).reset_index(drop=True), use_container_width=True)
 
-        st.subheader("App Description and Background Information")
+        st.subheader("앱 설명 및 배경 정보")
         st.markdown("""
-        This web app visualizes and compares the 'Generosity' index of each country based on **World Happiness Report** data.
+        이 웹 앱은 **세계 행복 보고서(World Happiness Report)** 데이터를 기반으로 각 국가의 '관대함(Generosity)' 지수를 시각화하고 비교합니다.
 
-        **What is the Generosity Index?**
-        * 'Generosity' is typically measured by the average national response to donating money in the past month.
-        * It is one of the important indicators reflecting social responsibility and the tendency to help others.
+        **관대함 지수란 무엇인가요?**
+        * '관대함'은 일반적으로 지난 한 달 동안 돈을 기부하는 것에 대한 평균적인 국가 응답으로 측정됩니다.
+        * 이는 사회적 책임과 타인을 돕는 경향을 반영하는 중요한 지표 중 하나입니다.
 
-        **Data Usage:**
-        * Data is fetched from the `processed_whr_short.csv` file.
-        * Through various visualizations and statistical analyses in each tab, you can understand the level of generosity by country.
+        **데이터 사용:**
+        * 데이터는 `processed_whr_short.csv` 파일에서 가져옵니다.
+        * 각 탭의 다양한 시각화 및 통계 분석을 통해 국가별 관대함 수준을 이해할 수 있습니다.
 
-        **World Map Visualization Note:**
-        * **ISO-ALPHA-3 country codes** are required to display the generosity index by country on the world map.
-        * The current code includes manual mapping for some countries. To accurately display all countries, it is recommended to include the corresponding ISO-ALPHA-3 codes in your `processed_whr_short.csv` file or use libraries like `pycountry` for dynamic mapping.
+        **세계 지도 시각화 참고:**
+        * 세계 지도에 국가별 관대함 지수를 표시하려면 **ISO-ALPHA-3 국가 코드**가 필요합니다.
+        * 현재 코드는 일부 국가에 대한 수동 매핑을 포함하고 있습니다. 모든 국가를 정확하게 표시하려면 `processed_whr_short.csv` 파일에 해당 ISO-ALPHA-3 코드를 포함하거나 `pycountry`와 같은 라이브러리를 사용하여 동적으로 매핑하는 것을 권장합니다.
         """)
     else:
-        st.warning("No data to display. Adjust filters or check original data.")
+        st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
