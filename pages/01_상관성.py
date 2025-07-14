@@ -268,7 +268,8 @@ st.markdown("""
 """)
 
 # Prepare data for trend analysis
-trend_data_cols = ['Year', 'Country', 'Generosity'] + available_factors 
+# available_factors에는 'Generosity'가 포함되어 있습니다.
+trend_data_cols = ['Year', 'Country'] + available_factors 
 trend_data_numeric = df[trend_data_cols].copy()
 
 for col in available_factors: 
@@ -328,22 +329,13 @@ if not trend_data_numeric.empty:
         plot_df_final['Country'] = plot_df_final['Country'].astype('category')
 
         # Multiselect for variables to plot on the Y-axis
-        # 'Generosity'는 항상 기본으로 포함되며, 다른 변수를 추가 선택할 수 있습니다.
-        # available_factors에서 'Generosity'를 제외한 나머지 변수들을 옵션으로 제공합니다.
-        other_trend_variables_options = [var for var in available_factors if var != 'Generosity']
-        
-        # 기본 선택은 'Generosity'만 포함
+        # 'Generosity'를 포함한 모든 available_factors를 옵션으로 제공하고, 'Generosity'를 기본 선택으로 설정
         default_selected_trend_variables = ['Generosity'] if 'Generosity' in available_factors else []
-
-        # 사용자가 추가로 선택할 변수들
-        additional_selected_variables = st.multiselect(
-            "추이를 볼 추가 변수를 선택하세요:",
-            options=other_trend_variables_options,
-            default=[] # 기본적으로 추가 변수는 선택되지 않음
+        final_selected_variables_for_plot = st.multiselect(
+            "추이를 볼 변수를 선택하세요:",
+            options=available_factors, # 'Generosity' 포함 모든 요인
+            default=default_selected_trend_variables # 'Generosity'를 기본 선택으로
         )
-        
-        # 최종적으로 그래프에 그릴 변수 목록: 기본값 + 추가 선택 변수
-        final_selected_variables_for_plot = default_selected_trend_variables + additional_selected_variables
 
         if final_selected_variables_for_plot:
             # Melt the DataFrame to long format for Plotly Express
