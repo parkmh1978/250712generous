@@ -195,7 +195,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["대시보드 개요", "국가 세부 �
 
 with tab1: # Dashboard Overview
     # 대시보드 개요 탭은 항상 최신 연도 데이터를 사용
-    st.header(f"📊 대시보드 개요 ({latest_year if latest_year else '전체'}년 데이터)")
+    st.header(f"� 대시보드 개요 ({latest_year if latest_year else '전체'}년 데이터)")
     
     current_df_for_tab1 = df_latest_year 
 
@@ -404,24 +404,42 @@ with tab5: # Factor Analysis
             """)
             
             for factor in selected_factors:
-                st.subheader(f"📊 {factor}와 관대함 지수")
+                # Make a copy to avoid SettingWithCopyWarning and ensure numeric types
+                correlation_data = df_latest_year[['Generosity', factor]].copy()
                 
-                correlation_data = df_latest_year[['Generosity', factor]].dropna()
-                
-                if not correlation_data.empty:
-                    correlation = correlation_data['Generosity'].corr(correlation_data[factor])
-                    st.metric(label=f"{factor}와 관대함 지수 간 피어슨 상관계수", value=f"{correlation:.3f}")
+                # Ensure columns are numeric, coercing errors to NaN
+                correlation_data['Generosity'] = pd.to_numeric(correlation_data['Generosity'], errors='coerce')
+                correlation_data[factor] = pd.to_numeric(correlation_data[factor], errors='coerce')
 
-                    # 산점도 그리기
-                    fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
-                                             hover_name='Country',
-                                             title=f'{factor} vs. 관대함 지수',
-                                             labels={factor: factor, 'Generosity': '관대함 지수'},
-                                             trendline='ols', # 선형 회귀 추세선 추가
-                                             color_discrete_sequence=px.colors.qualitative.Plotly)
-                    fig_scatter.update_layout(template="plotly_white", title_x=0.5,
-                                              margin=dict(t=50, b=50, l=50, r=50))
-                    st.plotly_chart(fig_scatter, use_container_width=True)
+                correlation_data.dropna(inplace=True) # Drop NaNs after coercion
+
+                if not correlation_data.empty:
+                    # Check if there's enough variance for OLS trendline and at least 2 data points
+                    if correlation_data[factor].nunique() > 1 and correlation_data['Generosity'].nunique() > 1 and len(correlation_data) >= 2:
+                        correlation = correlation_data['Generosity'].corr(correlation_data[factor])
+                        st.metric(label=f"{factor}와 관대함 지수 간 피어슨 상관계수", value=f"{correlation:.3f}")
+
+                        fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
+                                                 hover_name='Country',
+                                                 title=f'{factor} vs. 관대함 지수',
+                                                 labels={factor: factor, 'Generosity': '관대함 지수'},
+                                                 trendline='ols', # 선형 회귀 추세선 추가
+                                                 color_discrete_sequence=px.colors.qualitative.Plotly)
+                        fig_scatter.update_layout(template="plotly_white", title_x=0.5,
+                                                  margin=dict(t=50, b=50, l=50, r=50))
+                        st.plotly_chart(fig_scatter, use_container_width=True)
+                    else:
+                        st.info(f"'{factor}' 또는 '관대함 지수' 데이터에 충분한 변화가 없거나 데이터 포인트가 부족하여 산점도 및 상관관계를 그릴 수 없습니다.")
+                        # Optionally, plot scatter without trendline if data points are > 0 but not enough for OLS
+                        if len(correlation_data) > 0:
+                            fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
+                                                     hover_name='Country',
+                                                     title=f'{factor} vs. 관대함 지수 (추세선 없음 - 데이터 부족)',
+                                                     labels={factor: factor, 'Generosity': '관대함 지수'},
+                                                     color_discrete_sequence=px.colors.qualitative.Plotly)
+                            fig_scatter.update_layout(template="plotly_white", title_x=0.5,
+                                                      margin=dict(t=50, b=50, l=50, r=50))
+                            st.plotly_chart(fig_scatter, use_container_width=True)
                 else:
                     st.info(f"{factor}와 관대함 지수 상관관계를 분석할 데이터가 부족합니다. 해당 요인에 결측치가 많을 수 있습니다.")
                 st.markdown("---") # 각 요인 분석 섹션 구분
@@ -443,3 +461,4 @@ with tab5: # Factor Analysis
 
     보다 심층적인 분석을 위해서는 **혼합 효과 모델(Mixed-effects models)** 또는 **패널 데이터 분석(Panel data analysis)**과 같은 통계 기법이 활용될 수 있습니다. 이러한 기법들은 국가별 고유한 특성과 시간 경과에 따른 변화를 동시에 고려하여 더 정확한 관계를 파악하는 데 도움을 줍니다.
     """)
+�
