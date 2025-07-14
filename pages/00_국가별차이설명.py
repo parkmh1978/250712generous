@@ -1,20 +1,19 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import altair as alt # Although imported, Altair is not explicitly used in chart generation in this specific code.
 import io
 
 # --------------------
-# 1. 페이지 설정
+# 1. 페이지 설정 (하위 페이지에도 설정 가능)
 # --------------------
 st.set_page_config(
-    page_title="국가별 관대함 비교 웹 앱",
-    page_icon="🌍",
+    page_title="요인 분석",
+    page_icon="📈",
     layout="wide"
 )
 
 # --------------------
-# 2. 데이터 로드
+# 2. 데이터 로드 (메인 앱과 동일하게 캐시 사용)
 # --------------------
 @st.cache_data
 def load_data():
@@ -23,11 +22,8 @@ def load_data():
     세계 지도 시각화를 위해 국가명과 ISO-ALPHA-3 코드 매핑을 시도합니다.
     """
     try:
-        # Streamlit Cloud에서는 파일을 앱과 같은 디렉토리에 두면 바로 접근 가능합니다.
         df = pd.read_csv('processed_whr.csv')
 
-        # Raw column names from the CSV that we expect, based on user's input
-        # 'country' 컬럼이 CSV 파일에 'Country'로 되어 있을 가능성이 높으므로 수정합니다.
         expected_raw_columns = [
             'Country', 'year', 'generosity', 'life_ladder', 'log_gdp_per_capita',
             'social_support', 'healthy_life_expectancy_at_birth',
@@ -35,16 +31,13 @@ def load_data():
             'positive_affect', 'negative_affect', 'confidence_in_national_government'
         ]
 
-        # Check for missing required columns first
         missing_columns_in_csv = [col for col in expected_raw_columns if col not in df.columns]
         if missing_columns_in_csv:
             st.error(f"필수 컬럼이 누락되었습니다: {', '.join(missing_columns_in_csv)}. 파일의 컬럼명을 확인해주세요.")
-            return pd.DataFrame() # Return empty DataFrame to stop app execution
+            return pd.DataFrame()
 
-        # Rename columns for display in the app (user-friendly names)
-        # 'Country'가 이미 'Country'라면 이 rename은 효과가 없지만, 다른 컬럼들은 유지됩니다.
         df.rename(columns={
-            'Country': 'Country', # CSV에 'Country'로 되어 있다면 이 줄은 실제 변경을 하지 않습니다.
+            'Country': 'Country',
             'year': 'Year',
             'generosity': 'Generosity',
             'life_ladder': 'Life Ladder',
@@ -54,24 +47,18 @@ def load_data():
             'freedom_to_make_life_choices': 'Freedom to Make Life Choices',
             'perceptions_of_corruption': 'Perceptions of Corruption',
             'positive_affect': 'Positive Affect',
-            'negative_affect': 'Negative Affect', # 오타 수정: Negative Affect
+            'negative_affect': 'Negative Affect',
             'confidence_in_national_government': 'Confidence in National Government'
         }, inplace=True)
 
-        # Select only the columns that were successfully renamed and are needed
-        # Use the display names here
         display_columns = [
             'Country', 'Year', 'Generosity', 'Life Ladder', 'Log GDP per capita',
             'Social Support', 'Healthy Life Expectancy at Birth',
             'Freedom to Make Life Choices', 'Perceptions of Corruption',
             'Positive Affect', 'Negative Affect', 'Confidence in National Government'
         ]
-        # Filter df to only include columns that actually exist after renaming
         df = df[[col for col in display_columns if col in df.columns]].copy()
 
-        # --- 세계 지도 시각화를 위한 국가 코드 추가 ---
-        # 더 포괄적인 매핑을 위해 pycountry 라이브러리 사용을 권장합니다.
-        # 여기서는 예시를 위해 일부 국가만 수동 매핑합니다.
         country_to_iso = {
             'South Korea': 'KOR', 'United States': 'USA', 'Canada': 'CAN',
             'Germany': 'DEU', 'France': 'FRA', 'United Kingdom': 'GBR',
@@ -120,7 +107,6 @@ def load_data():
         }
         df['iso_alpha'] = df['Country'].map(country_to_iso)
 
-        # ISO 코드를 찾지 못한 국가에 대한 경고
         unmapped_countries = df[df['iso_alpha'].isnull()]['Country'].unique().tolist()
         if unmapped_countries:
             st.warning(f"경고: 다음 국가들은 ISO 코드를 찾을 수 없어 지도에 표시되지 않을 수 있습니다: {', '.join(unmapped_countries)}. 'processed_whr.csv' 파일의 국가명과 코드 매핑을 확인해주세요.")
@@ -128,438 +114,204 @@ def load_data():
         return df
     except FileNotFoundError:
         st.error("`processed_whr.csv` 파일을 찾을 수 없습니다. 파일을 업로드하거나 경로를 확인해주세요.")
-        return pd.DataFrame() # 빈 DataFrame 반환
+        return pd.DataFrame()
     except Exception as e:
         st.error(f"데이터 로드 중 오류가 발생했습니다: {e}")
         return pd.DataFrame()
 
+# 데이터 로드
 df = load_data()
 
-# 데이터가 비어있으면 앱 실행 중단
 if df.empty:
     st.stop()
 
-# 최신 연도 데이터 (대시보드 개요 탭용)
-df_latest_year = pd.DataFrame()
-latest_year = None
-if 'Year' in df.columns:
-    latest_year = df['Year'].max()
-    df_latest_year = df[df['Year'] == latest_year].copy()
+# 최신 연도 계산 (필요한 경우)
+latest_year = df['Year'].max() if 'Year' in df.columns else None
+
+# --------------------
+# 3. 요인 분석 섹션
+# --------------------
+st.header("📈 관대함 지수 요인 분석")
+st.markdown("""
+이 섹션에서는 국가별 관대함 지수와 다양한 사회경제적 요인 간의 관계를 탐색합니다.
+**전체 연도 데이터**를 기반으로 선택된 요인들이 관대함에 미치는 영향을 분석합니다.
+""")
+
+# 분석에 사용할 요인 컬럼 목록 (표시 이름)
+factor_columns = [
+    'Life Ladder', 'Log GDP per capita', 'Social Support',
+    'Healthy Life Expectancy at Birth', 'Freedom to Make Life Choices',
+    'Perceptions of Corruption', 'Positive Affect', 'Negative Affect',
+    'Confidence in National Government'
+]
+
+# df에 실제로 존재하는 요인들만 필터링
+available_factors = [col for col in factor_columns if col in df.columns]
+
+if not available_factors:
+    st.warning("분석할 수 있는 요인 컬럼이 데이터에 없습니다. `processed_whr.csv` 파일에 해당 컬럼들이 포함되어 있는지 확인해주세요.")
 else:
-    st.warning("경고: 'Year' 컬럼이 없어 최신 연도 데이터 필터링이 불가능합니다. 모든 데이터를 사용합니다.")
-    df_latest_year = df.copy() # Year 컬럼이 없으면 전체 데이터 사용
+    selected_factors = st.multiselect(
+        "관대함 지수와의 상관성을 분석할 요인을 선택하세요:",
+        options=available_factors,
+        default=['Log GDP per capita'] if 'Log GDP per capita' in available_factors else (available_factors[0] if available_factors else [])
+    )
 
-
-# --------------------
-# 3. 사이드바 - 앱 정보 및 필터
-# --------------------
-with st.sidebar:
-    st.header("설정")
-    st.write("이 앱은 세계 행복 보고서 데이터를 기반으로 국가별 관대함을 비교합니다.")
-    st.caption("데이터 출처: processed_whr.csv")
-
-    df_display = df.copy() # 필터링을 위한 초기 DataFrame 복사
-
-    if 'Year' in df.columns:
-        st.subheader("데이터 연도 선택")
-        selected_year_sidebar = st.slider( # 변수명 변경하여 충돌 방지
-            "분석할 연도를 선택하세요:",
-            int(df['Year'].min()),
-            int(df['Year'].max()),
-            int(df['Year'].max()) # 기본값으로 최신 연도 설정
-        )
-        df_display = df[df['Year'] == selected_year_sidebar].copy()
-    else:
-        st.caption("연도별 데이터가 없습니다. 모든 가용 데이터를 사용합니다.")
-
-    if not df_display.empty:
-        st.subheader("관대함 지수 범위 필터")
-        min_generosity, max_generosity = st.slider(
-            "관대함 지수 범위:",
-            float(df_display['Generosity'].min()),
-            float(df_display['Generosity'].max()),
-            (float(df_display['Generosity'].min()), float(df_display['Generosity'].max()))
-        )
-        df_display = df_display[(df_display['Generosity'] >= min_generosity) & (df_display['Generosity'] <= max_generosity)]
-    else:
-        st.warning("필터링할 데이터가 없습니다.")
-
-
-# --------------------
-# 4. 메인 컨텐츠 영역
-# --------------------
-st.title("🌍 국가 관대함 지수 비교")
-
-# 탭 구현
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["대시보드 개요", "국가 세부 정보", "국가 비교", "데이터 테이블", "요인 분석"])
-
-with tab1: # Dashboard Overview
-    # 대시보드 개요 탭은 항상 최신 연도 데이터를 사용
-    st.header(f"📊 대시보드 개요 ({latest_year if latest_year else '전체'}년 데이터)")
-    
-    current_df_for_tab1 = df_latest_year 
-
-    if not current_df_for_tab1.empty:
-        col1, col2 = st.columns(2)
-
-        with col1:
-            avg_generosity = current_df_for_tab1['Generosity'].mean()
-            st.metric(label=f"{latest_year if latest_year else '전체'}년 평균 관대함 지수", value=f"{avg_generosity:.3f}")
-            st.write("### 🥇 관대함 지수 상위 5개국")
-            top_5_generosity = current_df_for_tab1.nlargest(5, 'Generosity')
-            st.dataframe(top_5_generosity[['Country', 'Generosity']].reset_index(drop=True), use_container_width=True)
-
-        with col2:
-            st.write("### 🥉 관대함 지수 하위 5개국")
-            bottom_5_generosity = current_df_for_tab1.nsmallest(5, 'Generosity')
-            st.dataframe(bottom_5_generosity[['Country', 'Generosity']].reset_index(drop=True), use_container_width=True)
-
-        st.subheader(f"{latest_year if latest_year else '전체'} 국가별 관대함 분포")
-        fig_hist = px.histogram(current_df_for_tab1, x='Generosity', nbins=20,
-                                 title='관대함 지수 분포',
-                                 labels={'Generosity': '관대함 지수'},
-                                 color_discrete_sequence=px.colors.qualitative.Pastel) # Improved color
-        fig_hist.update_layout(template="plotly_white", title_x=0.5, # Centered title, clean template
-                                 margin=dict(t=50, b=50, l=50, r=50)) # Add margins
-        st.plotly_chart(fig_hist, use_container_width=True)
-
-        # World Map Visualization ( Choropleth Map )
-        st.subheader(f"🗺️ {latest_year if latest_year else '전체'} 관대함 지수 세계 지도")
-        # 지도 표시를 위해 ISO 코드가 있는 데이터만 필터링
-        df_map = current_df_for_tab1.dropna(subset=['iso_alpha']).copy()
-        if not df_map.empty:
-            fig_map = px.choropleth(df_map,
-                                     locations="iso_alpha",
-                                     color="Generosity",
-                                     hover_name="Country",
-                                     # 관대함 지수가 음수일 때 붉은색 계열, 양수일 때 푸른색 계열
-                                     # 0 근처가 흰색으로 표시되지 않도록 RdYlBu 스케일 사용
-                                     color_continuous_scale=px.colors.diverging.RdYlBu, # Red-Yellow-Blue diverging scale
-                                     color_continuous_midpoint=0, # Set midpoint at 0 for diverging colors
-                                     title='세계 관대함 지수 지도',
-                                     labels={'Generosity': '관대함 지수'})
-            fig_map.update_layout(template="plotly_white", title_x=0.5,
-                                  margin=dict(t=50, b=50, l=50, r=50))
-            st.plotly_chart(fig_map, use_container_width=True)
-        else:
-            st.info("지도에 표시할 국가 데이터가 없습니다. ISO 코드가 매핑되지 않았거나 데이터가 필터링되었습니다.")
-
-
-        # 모든 국가에 대한 막대 차트
-        st.subheader(f"{latest_year if latest_year else '전체'} 국가별 관대함 지수 (막대 차트)")
-        fig_bar_all = px.bar(current_df_for_tab1.sort_values('Generosity', ascending=False), x='Country', y='Generosity',
-                             title=f"{latest_year if latest_year else '전체'} 국가별 관대함 지수",
-                             labels={'Country': '국가', 'Generosity': '관대함 지수'},
-                             color_discrete_sequence=px.colors.qualitative.D3,
-                             hover_data=['iso_alpha']) # hover_data에 iso_alpha 추가
-        fig_bar_all.update_layout(template="plotly_white", title_x=0.5,
-                                  margin=dict(t=50, b=50, l=50, r=50),
-                                  bargap=0.2) # 막대 사이 간격 넓히기
-        st.plotly_chart(fig_bar_all, use_container_width=True)
-    else:
-        st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
-
-
-with tab2: # Country Details - Modified for multi-country comparison
-    st.header("🔍 국가 세부 정보 및 연도별 추세 분석")
-    if not df.empty and 'Year' in df.columns: # df_display가 아닌 전체 df를 사용해 연도별 추세 분석
-        selected_countries_detail = st.multiselect(
-            "세부 정보를 볼 국가를 선택하세요:",
-            options=df['Country'].sort_values().unique(), # 전체 데이터셋에서 국가 선택
-            default=df['Country'].head(1).tolist() # 기본값으로 1개 국가 설정
-        )
-
-        if selected_countries_detail:
-            # 선택된 국가들의 전체 연도 데이터 필터링
-            countries_time_series_data = df[df['Country'].isin(selected_countries_detail)].sort_values(['Country', 'Year'])
-
-            if not countries_time_series_data.empty:
-                st.subheader(f"선택된 국가들의 관대함 지수 추세")
-                
-                # 라인 차트 (여러 국가 비교)
-                fig_line = px.line(countries_time_series_data, x='Year', y='Generosity',
-                                   color='Country', # 국가별로 다른 색상 적용
-                                   title=f'{", ".join(selected_countries_detail)} 관대함 지수 추세',
-                                   labels={'Generosity': '관대함 지수', 'Year': '연도'},
-                                   markers=True, # Add markers for clarity
-                                   color_discrete_sequence=px.colors.qualitative.Plotly) # Consistent color
-                fig_line.update_layout(template="plotly_white", title_x=0.5,
-                                       margin=dict(t=50, b=50, l=50, r=50))
-                st.plotly_chart(fig_line, use_container_width=True)
-
-                st.subheader(f"선택된 국가들의 최신 ({latest_year if latest_year else '전체'}년) 관대함 지수")
-                # 최신 연도 데이터에 대한 테이블 (선택된 국가만)
-                current_year_generosity = df_latest_year[df_latest_year['Country'].isin(selected_countries_detail)]
-                if not current_year_generosity.empty:
-                    st.dataframe(current_year_generosity[['Country', 'Generosity']].sort_values('Generosity', ascending=False).reset_index(drop=True), use_container_width=True)
-                else:
-                    st.info("선택된 국가에 대한 최신 연도 데이터가 없습니다.")
-
-            else:
-                st.info("선택된 국가에 대한 연도별 데이터가 없습니다.")
-        else:
-            st.info("세부 정보를 볼 국가를 하나 이상 선택해주세요.")
-    elif 'Year' not in df.columns:
-        st.warning("연도별 데이터가 없어 국가 세부 정보 분석을 할 수 없습니다.")
-    else:
-        st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
-
-with tab3: # Country Comparison
-    st.header("🆚 국가 비교 분석")
-    if not df_display.empty:
-        compare_countries = st.multiselect(
-            "비교할 국가를 선택하세요 (5개 이하 권장):",
-            options=df_display['Country'].sort_values().unique(),
-            default=df_display['Country'].head(2).tolist() # 기본값으로 2개 국가 설정
-        )
-
-        if compare_countries:
-            compare_df = df_display[df_display['Country'].isin(compare_countries)].sort_values('Generosity', ascending=False).copy()
-            st.subheader("선택된 국가별 관대함 지수 비교")
-            fig_compare = px.bar(compare_df, x='Country', y='Generosity',
-                                 title='국가별 관대함 지수 비교',
-                                 labels={'Country': '국가', 'Generosity': '관대함 지수'},
-                                 color='Country',
-                                 text='Generosity',
-                                 color_discrete_sequence=px.colors.qualitative.Safe) # Another good qualitative scale
-            fig_compare.update_traces(texttemplate='%{text:.3f}', textposition='outside')
-            fig_compare.update_layout(template="plotly_white", title_x=0.5,
-                                      margin=dict(t=50, b=50, l=50, r=50))
-            st.plotly_chart(fig_compare, use_container_width=True)
-
-            st.subheader("선택된 국가에 대한 상세 비교 테이블")
-            st.dataframe(compare_df[['Country', 'Generosity']].reset_index(drop=True), use_container_width=True)
-        else:
-            st.info("비교할 국가를 하나 이상 선택해주세요.")
-    else:
-        st.warning("비교할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
-
-with tab4: # Data Table
-    st.header("📋 원본 데이터 테이블")
-    if not df_display.empty:
-        st.write("필터링된 원본 데이터를 확인하고 정렬할 수 있습니다.")
-        st.dataframe(df_display.sort_values(by='Generosity', ascending=False).reset_index(drop=True), use_container_width=True)
-
-        # Debugging section for unmapped countries
-        if 'iso_alpha' in df.columns:
-            unmapped_countries_all_data = df[df['iso_alpha'].isnull()]['Country'].unique().tolist()
-            if unmapped_countries_all_data:
-                st.subheader("⚠️ 지도에 표시되지 않는 국가 목록")
-                st.info(f"다음 국가들은 ISO 코드를 찾을 수 없어 지도에 표시되지 않습니다. `processed_whr.csv` 파일의 국가명과 코드 매핑을 확인해주세요: {', '.join(unmapped_countries_all_data)}")
-                st.markdown("---") # Separator
-
-        st.subheader("앱 설명 및 배경 정보")
+    if selected_factors:
+        st.markdown("### 📊 선택된 요인과 관대함 지수 상관성")
         st.markdown("""
-        이 웹 앱은 **세계 행복 보고서(World Happiness Report)** 데이터를 기반으로 각 국가의 '관대함(Generosity)' 지수를 시각화하고 비교합니다.
-
-        **관대함 지수란 무엇인가요?**
-        * '관대함'은 일반적으로 지난 한 달 동안 돈을 기부하는 것에 대한 평균적인 국가 응답으로 측정됩니다.
-        * 이는 사회적 책임과 타인을 돕는 경향을 반영하는 중요한 지표 중 하나입니다.
-
-        **데이터 사용:**
-        * 데이터는 `processed_whr.csv` 파일에서 가져옵니다.
-        * 각 탭의 다양한 시각화 및 통계 분석을 통해 국가별 관대함 수준을 이해할 수 있습니다.
-
-        **세계 지도 시각화 참고:**
-        * 세계 지도에 국가별 관대함 지수를 표시하려면 **ISO-ALPHA-3 국가 코드**가 필요합니다.
-        * 현재 코드는 일부 국가에 대한 수동 매핑을 포함하고 있습니다. 모든 국가를 정확하게 표시하려면 `processed_whr.csv` 파일에 해당 ISO-ALPHA-3 코드를 포함하거나 `pycountry`와 같은 라이브러리를 사용하여 동적으로 매핑하는 것을 권장합니다.
+        * **상관계수 해석:**
+            * `+1`에 가까울수록 양의 선형 관계 (요인 값이 높을수록 관대함도 높음)
+            * `-1`에 가까울수록 음의 선형 관계 (요인 값이 높을수록 관대함은 낮음)
+            * `0`에 가까울수록 선형 관계가 약함
         """)
-    else:
-        st.warning("표시할 데이터가 없습니다. 필터를 조정하거나 원본 데이터를 확인하세요.")
-
-with tab5: # Factor Analysis
-    st.header("📈 관대함 지수 요인 분석")
-    st.markdown("""
-    이 섹션에서는 국가별 관대함 지수와 다양한 사회경제적 요인 간의 관계를 탐색합니다.
-    **전체 연도 데이터**를 기반으로 선택된 요인들이 관대함에 미치는 영향을 분석합니다.
-    """)
-
-    # 분석에 사용할 요인 컬럼 목록 (표시 이름)
-    factor_columns = [
-        'Life Ladder', 'Log GDP per capita', 'Social Support',
-        'Healthy Life Expectancy at Birth', 'Freedom to Make Life Choices',
-        'Perceptions of Corruption', 'Positive Affect', 'Negative Affect', # 'Negative_affect' 오타 수정
-        'Confidence in National Government'
-    ]
-    
-    # df에 실제로 존재하는 요인들만 필터링 (df_latest_year 대신 df 사용)
-    available_factors = [col for col in factor_columns if col in df.columns]
-
-    if not available_factors:
-        st.warning("분석할 수 있는 요인 컬럼이 데이터에 없습니다. `processed_whr.csv` 파일에 해당 컬럼들이 포함되어 있는지 확인해주세요.")
-    else:
-        selected_factors = st.multiselect(
-            "관대함 지수와의 상관성을 분석할 요인을 선택하세요:",
-            options=available_factors,
-            default=['Log GDP per capita'] if 'Log GDP per capita' in available_factors else (available_factors[0] if available_factors else [])
-        )
-
-        if selected_factors:
-            st.markdown("### 📊 선택된 요인과 관대함 지수 상관성")
-            st.markdown("""
-            * **상관계수 해석:**
-                * `+1`에 가까울수록 양의 선형 관계 (요인 값이 높을수록 관대함도 높음)
-                * `-1`에 가까울수록 음의 선형 관계 (요인 값이 높을수록 관대함은 낮음)
-                * `0`에 가까울수록 선형 관계가 약함
-            """)
+        
+        for factor in selected_factors:
+            st.subheader(f"📈 {factor}와 관대함 지수")
             
-            for factor in selected_factors:
-                st.subheader(f"📈 {factor}와 관대함 지수")
-                
-                # 전체 데이터 사용 (df_latest_year 대신 df 사용)
-                correlation_data = df[['Country', 'Year', 'Generosity', factor]].copy()
-                
-                # Ensure columns are numeric, coercing errors to NaN
-                correlation_data['Generosity'] = pd.to_numeric(correlation_data['Generosity'], errors='coerce')
-                correlation_data[factor] = pd.to_numeric(correlation_data[factor], errors='coerce')
+            correlation_data = df[['Country', 'Year', 'Generosity', factor]].copy()
+            
+            correlation_data['Generosity'] = pd.to_numeric(correlation_data['Generosity'], errors='coerce')
+            correlation_data[factor] = pd.to_numeric(correlation_data[factor], errors='coerce')
 
-                correlation_data.dropna(inplace=True) # Drop NaNs after coercion
+            correlation_data.dropna(inplace=True)
 
-                if not correlation_data.empty:
-                    # 1. 전체 데이터를 사용한 상관계수 (Pooled Correlation)
-                    st.markdown("#### 🌍 전체 데이터 상관계수 (Pooled Correlation)")
-                    # Check if there's enough variance (std dev > a very small number) for OLS trendline and at least 2 data points
-                    if (correlation_data[factor].std() > 1e-9 and 
-                        correlation_data['Generosity'].std() > 1e-9 and 
-                        len(correlation_data) >= 2):
-                        
-                        pooled_correlation = correlation_data['Generosity'].corr(correlation_data[factor])
-                        st.metric(label=f"전체 데이터 '{factor}'와 관대함 지수 간 피어슨 상관계수", value=f"{pooled_correlation:.3f}")
+            if not correlation_data.empty:
+                st.markdown("#### 🌍 전체 데이터 상관계수 (Pooled Correlation)")
+                if (correlation_data[factor].std() > 1e-9 and 
+                    correlation_data['Generosity'].std() > 1e-9 and 
+                    len(correlation_data) >= 2):
+                    
+                    pooled_correlation = correlation_data['Generosity'].corr(correlation_data[factor])
+                    st.metric(label=f"전체 데이터 '{factor}'와 관대함 지수 간 피어슨 상관계수", value=f"{pooled_correlation:.3f}")
 
+                    fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
+                                             hover_name='Country',
+                                             color='Country',
+                                             title=f'전체 데이터: {factor} vs. 관대함 지수',
+                                             labels={factor: factor, 'Generosity': '관대함 지수'},
+                                             trendline='ols',
+                                             color_discrete_sequence=px.colors.qualitative.Plotly)
+                    fig_scatter.update_layout(template="plotly_white", title_x=0.5,
+                                              margin=dict(t=50, b=50, l=50, r=50))
+                    st.plotly_chart(fig_scatter, use_container_width=True)
+                else:
+                    st.info(f"전체 데이터에서 '{factor}' 또는 '관대함 지수' 데이터에 충분한 변화가 없거나 데이터 포인트가 부족하여 산점도 및 상관관계를 그릴 수 없습니다. (OLS 추세선 제외)")
+                    if len(correlation_data) > 0:
                         fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
                                                  hover_name='Country',
-                                                 color='Country', # 국가별 색상 구분
-                                                 title=f'전체 데이터: {factor} vs. 관대함 지수',
+                                                 color='Country',
+                                                 title=f'전체 데이터: {factor} vs. 관대함 지수 (추세선 없음 - 데이터 부족)',
                                                  labels={factor: factor, 'Generosity': '관대함 지수'},
-                                                 trendline='ols', # 선형 회귀 추세선 추가
                                                  color_discrete_sequence=px.colors.qualitative.Plotly)
                         fig_scatter.update_layout(template="plotly_white", title_x=0.5,
                                                   margin=dict(t=50, b=50, l=50, r=50))
                         st.plotly_chart(fig_scatter, use_container_width=True)
-                    else:
-                        st.info(f"전체 데이터에서 '{factor}' 또는 '관대함 지수' 데이터에 충분한 변화가 없거나 데이터 포인트가 부족하여 산점도 및 상관관계를 그릴 수 없습니다. (OLS 추세선 제외)")
-                        if len(correlation_data) > 0:
-                            fig_scatter = px.scatter(correlation_data, x=factor, y='Generosity',
-                                                     hover_name='Country',
-                                                     color='Country',
-                                                     title=f'전체 데이터: {factor} vs. 관대함 지수 (추세선 없음 - 데이터 부족)',
-                                                     labels={factor: factor, 'Generosity': '관대함 지수'},
-                                                     color_discrete_sequence=px.colors.qualitative.Plotly)
-                            fig_scatter.update_layout(template="plotly_white", title_x=0.5,
-                                                      margin=dict(t=50, b=50, l=50, r=50))
-                            st.plotly_chart(fig_scatter, use_container_width=True)
-                    
-                    st.markdown("---")
+                
+                st.markdown("---")
 
-                    # 2. 국가별 상관계수 평균 (Average Within-Country Correlation)
-                    st.markdown("#### 🏘️ 국가 내 상관계수 평균 (Average Within-Country Correlation)")
-                    country_correlations = []
-                    for country in correlation_data['Country'].unique():
-                        country_df = correlation_data[correlation_data['Country'] == country]
-                        # 각 국가별로 최소 2개 이상의 데이터 포인트와 분산이 있어야 상관계수 계산 가능
-                        if len(country_df) >= 2 and country_df[factor].std() > 1e-9 and country_df['Generosity'].std() > 1e-9:
-                            corr = country_df['Generosity'].corr(country_df[factor])
-                            country_correlations.append(corr)
-                    
-                    if country_correlations:
-                        avg_within_country_corr = pd.Series(country_correlations).mean()
-                        st.metric(label=f"국가 내 '{factor}'와 관대함 지수 간 평균 피어슨 상관계수", value=f"{avg_within_country_corr:.3f}")
-                        st.info(f"({len(country_correlations)}개 국가의 상관계수 평균)")
-                    else:
-                        st.info("각 국가 내에서 상관계수를 계산하기에 충분한 데이터가 없습니다.")
-
+                st.markdown("#### 🏘️ 국가 내 상관계수 평균 (Average Within-Country Correlation)")
+                country_correlations = []
+                for country in correlation_data['Country'].unique():
+                    country_df = correlation_data[correlation_data['Country'] == country]
+                    if len(country_df) >= 2 and country_df[factor].std() > 1e-9 and country_df['Generosity'].std() > 1e-9:
+                        corr = country_df['Generosity'].corr(country_df[factor])
+                        country_correlations.append(corr)
+                
+                if country_correlations:
+                    avg_within_country_corr = pd.Series(country_correlations).mean()
+                    st.metric(label=f"국가 내 '{factor}'와 관대함 지수 간 평균 피어슨 상관계수", value=f"{avg_within_country_corr:.3f}")
+                    st.info(f"({len(country_correlations)}개 국가의 상관계수 평균)")
                 else:
-                    st.info(f"{factor}와 관대함 지수 상관관계를 분석할 데이터가 부족합니다. 해당 요인에 결측치가 많을 수 있습니다.")
-                st.markdown("---") # 각 요인 분석 섹션 구분
-        else:
-            st.info("분석할 요인을 하나 이상 선택해주세요.")
+                    st.info("각 국가 내에서 상관계수를 계산하기에 충분한 데이터가 없습니다.")
 
-    # --- 새로운 연도별 추이 분석 섹션 ---
-    st.markdown("---")
-    st.header("📈 요인 및 관대함 지수 연도별 추이 분석")
-    st.markdown("""
-    이 섹션에서는 선택된 요인 또는 관대함 지수의 연도별 변화 추이를 시각화합니다.
-    전체 국가의 평균 추이와 특정 국가의 추이를 비교할 수 있습니다.
-    """)
-
-    # Prepare data for trend analysis
-    # Ensure 'Generosity' and all selected factors are numeric
-    # Use the full 'df' for time series analysis
-    trend_data_cols = ['Year', 'Country', 'Generosity'] + available_factors
-    trend_data_numeric = df[trend_data_cols].copy()
-
-    for col in ['Generosity'] + available_factors:
-        trend_data_numeric[col] = pd.to_numeric(trend_data_numeric[col], errors='coerce')
-    trend_data_numeric.dropna(subset=['Generosity'] + available_factors, inplace=True)
-
-    if not trend_data_numeric.empty:
-        # Calculate overall yearly average for Generosity and selected factors
-        yearly_overall_average = trend_data_numeric.groupby('Year')[['Generosity'] + available_factors].mean().reset_index()
-        yearly_overall_average['Country'] = '전체 평균'
-
-        # Get South Korea data
-        korea_data = trend_data_numeric[trend_data_numeric['Country'] == 'South Korea'].copy()
-        
-        # Multiselect for other countries
-        all_countries_for_trend = sorted(trend_data_numeric['Country'].unique().tolist())
-        # Remove 'South Korea' from options if it exists, as it's default
-        if 'South Korea' in all_countries_for_trend:
-            all_countries_for_trend.remove('South Korea')
-
-        selected_countries_for_trend = st.multiselect(
-            "추이를 비교할 추가 국가를 선택하세요:",
-            options=all_countries_for_trend,
-            default=[] # No default other than Korea
-        )
-
-        # Combine data for plotting
-        plot_df = yearly_overall_average.copy() # Start with overall average
-        
-        if not korea_data.empty:
-            plot_df = pd.concat([plot_df, korea_data])
-        else:
-            st.warning("데이터에 'South Korea'가 없어 해당 국가의 추이를 표시할 수 없습니다.")
-        
-        if selected_countries_for_trend:
-            other_countries_data = trend_data_numeric[trend_data_numeric['Country'].isin(selected_countries_for_trend)].copy()
-            plot_df = pd.concat([plot_df, other_countries_data])
-        
-        # Ensure 'Country' is a categorical type for consistent plotting colors
-        plot_df['Country'] = plot_df['Country'].astype('category')
-
-        # Select which variable to plot on the Y-axis
-        trend_variable_options = ['Generosity'] + available_factors
-        trend_variable = st.selectbox(
-            "추이를 볼 변수를 선택하세요:",
-            options=trend_variable_options,
-            index=0 # Default to Generosity
-        )
-
-        if trend_variable:
-            st.subheader(f"'{trend_variable}'의 연도별 추이")
-            fig_trend = px.line(plot_df, x='Year', y=trend_variable, color='Country',
-                                title=f'{trend_variable} 연도별 추이 (전체 평균 및 선택 국가)',
-                                labels={'Year': '연도', trend_variable: trend_variable},
-                                markers=True,
-                                color_discrete_sequence=px.colors.qualitative.Bold) # Use a distinct color palette
-            
-            fig_trend.update_layout(template="plotly_white", title_x=0.5,
-                                    margin=dict(t=50, b=50, l=50, r=50),
-                                    hovermode="x unified") # Improved hover experience
-            st.plotly_chart(fig_trend, use_container_width=True)
-        else:
-            st.info("추이를 볼 변수를 선택해주세요.")
+            else:
+                st.info(f"{factor}와 관대함 지수 상관관계를 분석할 데이터가 부족합니다. 해당 요인에 결측치가 많을 수 있습니다.")
+            st.markdown("---")
     else:
-        st.warning("연도별 추이 분석을 위한 데이터가 부족합니다. 원본 데이터를 확인해주세요.")
+        st.info("분석할 요인을 하나 이상 선택해주세요.")
 
-    st.markdown("""
-    ### 💡 고급 분석 고려사항: 반복 측정 데이터의 특성 (추가 설명)
+# --- 연도별 추이 분석 섹션 ---
+st.markdown("---")
+st.header("📈 요인 및 관대함 지수 연도별 추이 분석")
+st.markdown("""
+이 섹션에서는 선택된 요인 또는 관대함 지수의 연도별 변화 추이를 시각화합니다.
+전체 국가의 평균 추이와 특정 국가의 추이를 비교할 수 있습니다.
+""")
 
-    이 앱은 패널 데이터의 특성을 고려하여 **전체 상관관계**와 **국가 내 상관계수 평균**을 제공합니다.
-    연도별 추이 그래프는 시간 흐름에 따른 변화를 시각적으로 보여주어, 각 국가의 특성과 전체적인 경향을 파악하는 데 도움을 줍니다.
+# Prepare data for trend analysis
+trend_data_cols = ['Year', 'Country', 'Generosity'] + available_factors
+trend_data_numeric = df[trend_data_cols].copy()
 
-    * **전체 평균:** 모든 국가의 해당 연도 데이터를 평균 낸 값으로, 전 세계적인 추세를 나타냅니다.
-    * **개별 국가:** 특정 국가의 연도별 변화를 보여줍니다.
+for col in ['Generosity'] + available_factors:
+    trend_data_numeric[col] = pd.to_numeric(trend_data_numeric[col], errors='coerce')
+trend_data_numeric.dropna(subset=['Generosity'] + available_factors, inplace=True)
 
-    이러한 시각화는 데이터의 복잡성을 이해하는 데 유용하지만, 더 깊이 있는 통계적 추론을 위해서는 위에서 언급된 **혼합 효과 모델**이나 **패널 데이터 분석**과 같은 고급 방법론을 고려해야 합니다.
-    """)
+if not trend_data_numeric.empty:
+    # Calculate overall yearly average for Generosity and selected factors
+    yearly_overall_average = trend_data_numeric.groupby('Year')[['Generosity'] + available_factors].mean().reset_index()
+    yearly_overall_average['Country'] = '전체 평균'
+
+    # Get South Korea data
+    korea_data = trend_data_numeric[trend_data_numeric['Country'] == 'South Korea'].copy()
+    
+    # Multiselect for other countries
+    all_countries_for_trend = sorted(trend_data_numeric['Country'].unique().tolist())
+    if 'South Korea' in all_countries_for_trend:
+        all_countries_for_trend.remove('South Korea')
+
+    selected_countries_for_trend = st.multiselect(
+        "추이를 비교할 추가 국가를 선택하세요:",
+        options=all_countries_for_trend,
+        default=[]
+    )
+
+    # Combine data for plotting
+    plot_df = yearly_overall_average.copy()
+    
+    if not korea_data.empty:
+        plot_df = pd.concat([plot_df, korea_data])
+    else:
+        st.warning("데이터에 'South Korea'가 없어 해당 국가의 추이를 표시할 수 없습니다.")
+    
+    if selected_countries_for_trend:
+        other_countries_data = trend_data_numeric[trend_data_numeric['Country'].isin(selected_countries_for_trend)].copy()
+        plot_df = pd.concat([plot_df, other_countries_data])
+    
+    plot_df['Country'] = plot_df['Country'].astype('category')
+
+    trend_variable_options = ['Generosity'] + available_factors
+    trend_variable = st.selectbox(
+        "추이를 볼 변수를 선택하세요:",
+        options=trend_variable_options,
+        index=0
+    )
+
+    if trend_variable:
+        st.subheader(f"'{trend_variable}'의 연도별 추이")
+        fig_trend = px.line(plot_df, x='Year', y=trend_variable, color='Country',
+                            title=f'{trend_variable} 연도별 추이 (전체 평균 및 선택 국가)',
+                            labels={'Year': '연도', trend_variable: trend_variable},
+                            markers=True,
+                            color_discrete_sequence=px.colors.qualitative.Bold)
+        
+        fig_trend.update_layout(template="plotly_white", title_x=0.5,
+                                margin=dict(t=50, b=50, l=50, r=50),
+                                hovermode="x unified")
+        st.plotly_chart(fig_trend, use_container_width=True)
+    else:
+        st.info("추이를 볼 변수를 선택해주세요.")
+else:
+    st.warning("연도별 추이 분석을 위한 데이터가 부족합니다. 원본 데이터를 확인해주세요.")
+
+st.markdown("""
+### 💡 고급 분석 고려사항: 반복 측정 데이터의 특성 (추가 설명)
+
+이 앱은 패널 데이터의 특성을 고려하여 **전체 상관관계**와 **국가 내 상관계수 평균**을 제공합니다.
+연도별 추이 그래프는 시간 흐름에 따른 변화를 시각적으로 보여주어, 각 국가의 특성과 전체적인 경향을 파악하는 데 도움을 줍니다.
+
+* **전체 평균:** 모든 국가의 해당 연도 데이터를 평균 낸 값으로, 전 세계적인 추세를 나타냅니다.
+* **개별 국가:** 특정 국가의 연도별 변화를 보여줍니다.
+
+이러한 시각화는 데이터의 복잡성을 이해하는 데 유용하지만, 더 깊이 있는 통계적 추론을 위해서는 위에서 언급된 **혼합 효과 모델**이나 **패널 데이터 분석**과 같은 고급 방법론을 고려해야 합니다.
+""")
